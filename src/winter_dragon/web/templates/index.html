@@ -51,7 +51,10 @@
     <h2 id="features-title">What it does in your server</h2>
     <dl class="feature-list">
       {% for feature in features %}
-        <div><dt>{{ feature.name | capitalize }} <code>/{{ feature.name }}</code></dt><dd>{{ feature.description }}.</dd></div>
+        <div>
+          <dt><a href="{{ feature.docs_url }}">{{ feature.name | capitalize }}</a> <code>/{{ feature.name }}</code></dt>
+          <dd>{{ feature.description }}. <a class="feature-more" href="{{ feature.docs_url }}">Options and example<span aria-hidden="true"> →</span></a></dd>
+        </div>
       {% endfor %}
     </dl>
   </section>

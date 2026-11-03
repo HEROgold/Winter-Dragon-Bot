@@ -131,6 +131,13 @@ def test_the_landing_page_lists_every_command_group(client: TestClient) -> None:
     assert 'href="/auth/discord/login"' in page
 
 
+def test_each_command_group_links_to_its_documentation_page(client: TestClient) -> None:
+    page = client.get("/").text
+
+    assert 'href="https://herogold.github.io/Winter-Dragon-Bot/commands/reminder/"' in page
+    assert 'href="https://herogold.github.io/Winter-Dragon-Bot/commands/bot-commands/"' in page
+
+
 def test_assets_load_over_the_scheme_the_page_was_opened_on(client: TestClient) -> None:
     # Behind a TLS-terminating proxy the server sees plain http; an absolute http:// link is blocked as mixed content.
     page = client.get("/").text

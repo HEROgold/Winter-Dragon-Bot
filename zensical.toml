@@ -17,6 +17,23 @@ nav = [
     { "User Tools" = "features/user-tools.md" },
     { "Platform & Services" = "features/platform.md" }
   ] },
+  { "Commands" = [
+    { "Overview" = "commands/index.md" },
+    { "/autochannel" = "commands/autochannel.md" },
+    { "/autoreassign" = "commands/autoreassign.md" },
+    { "/bot-commands" = "commands/bot-commands.md" },
+    { "/channel-utils" = "commands/channel-utils.md" },
+    { "/fuel" = "commands/fuel.md" },
+    { "/invite" = "commands/invite.md" },
+    { "/reminder" = "commands/reminder.md" },
+    { "/stats" = "commands/stats.md" },
+    { "/steam" = "commands/steam.md" },
+    { "/team" = "commands/team.md" },
+    { "/tournament" = "commands/tournament.md" },
+    { "/uptime" = "commands/uptime.md" },
+    { "/urban" = "commands/urban.md" },
+    { "/voice" = "commands/voice.md" }
+  ] },
   { "Getting Started" = "guide/getting-started.md" },
   { "Development" = [
     { "Architecture" = "dev/architecture.md" },

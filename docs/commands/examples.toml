@@ -1,0 +1,462 @@
+# What the command metadata can't say: what each feature is for, its setup, and an example of the bot's reply.
+# scripts/generate_command_docs.py reads this next to the cogs' command definitions and writes the pages;
+# `--check` fails when a command has no `reply` here. Replies are written from the cog source, so change the one
+# here when you change what the cog sends.
+
+[autochannel]
+about = """
+Members join one hub voice channel and the bot makes a voice channel for them, which they then own. They can rename it and set its user limit. The bot removes the channel when it is empty."""
+setup = """
+Run `/autochannel setup` to create a category with a hub channel, or `/autochannel mark` to use a voice channel you already have. The bot needs the Manage Channels and Move Members permissions."""
+
+[autochannel.commands.guild-limit]
+usage = "/autochannel guild-limit limit:10"
+kind = "embed"
+private = true
+reply = "This server now allows 10 automatic channels."
+
+[autochannel.commands.limit]
+usage = "/autochannel limit limit:4"
+kind = "embed"
+private = true
+reply = """
+Saved and applied to #Your channel.
+(Before you have a channel: Saved; your next channel gets it.)"""
+
+[autochannel.commands.mark]
+usage = "/autochannel mark channel:#Join to create"
+kind = "embed"
+private = true
+reply = "Joining #Join to create now gives members their own channel."
+
+[autochannel.commands.name]
+usage = "/autochannel name name:Movie night"
+kind = "embed"
+private = true
+reply = """
+Saved and applied to #Movie night.
+(Before you have a channel: Saved; your next channel gets it.)"""
+
+[autochannel.commands.setup]
+usage = "/autochannel setup category_name:Hangout hub_name:Join to create"
+kind = "embed"
+private = true
+reply = "All set: joining #Join to create gives members their own channel."
+
+[autoreassign]
+about = """
+When a member leaves the server and comes back, the bot gives them the roles they had when they left. A role the bot can't give, because it sits above the bot's highest role, is skipped."""
+setup = """
+The bot needs the Manage Roles permission, and its own role must sit above the roles it should give back."""
+
+[autoreassign.commands.disable]
+usage = "/autoreassign disable"
+kind = "embed"
+private = true
+reply = "Rejoining members no longer get their roles back."
+
+[autoreassign.commands.enable]
+usage = "/autoreassign enable"
+kind = "embed"
+private = true
+reply = """
+Members who leave and rejoin now get their roles back; my role must be above the roles to give.
+These roles are above my highest role, so I can't give them back: @Admin. Move my role above them.
+(The second sentence appears only when some roles are out of reach.)"""
+
+[bot-commands]
+about = """
+Shows which of the bot's commands Discord knows about, and pushes the bot's current commands to Discord when they differ."""
+
+[bot-commands.commands.list]
+usage = "/bot-commands list"
+kind = "embed"
+reply = """
+**Registered commands**
+One line per command, saying whether it is synced with Discord or still pending."""
+
+[bot-commands.commands.resync]
+usage = "/bot-commands resync"
+who = "The bot's owners, in a server."
+reply = """
+Resyncing commands…
+Resync finished."""
+
+[channel-utils]
+about = """
+Small tools for managing channels without opening the channel settings."""
+setup = """
+The bot needs the View Channels and Manage Channels permissions on the channels it changes."""
+
+[channel-utils.commands.delete-category]
+usage = "/channel-utils delete-category category:Old event"
+kind = "embed"
+private = true
+reply = "Deleted the category Old event and its channels."
+
+[channel-utils.commands.lock]
+usage = "/channel-utils lock target:@Newcomers"
+kind = "embed"
+private = true
+reply = "Locked this channel for @Newcomers."
+
+[channel-utils.commands.unlock]
+usage = "/channel-utils unlock target:@Newcomers"
+kind = "embed"
+private = true
+reply = "Unlocked this channel for @Newcomers."
+
+[fuel]
+about = """
+Log each time you fill your car's tank, and see how many kilometres you get per litre (or litres per 100 km) over time. Your logs are yours; other members can't see them."""
+
+[fuel.commands.add]
+usage = "/fuel add price:62.40 distance:640 amount:41.2"
+kind = "embed"
+private = true
+reply = """
+Logged a refuel of 41.2 for 62.4 after 640: 15.53 km/L.
+Use /fuel efficiency to see how that changes over time."""
+
+[fuel.commands.efficiency]
+usage = "/fuel efficiency"
+kind = "image"
+private = true
+reply = "A line graph of your fuel efficiency over time, in your units."
+
+[fuel.commands.units]
+usage = "/fuel units units:L/100km"
+private = true
+reply = "Your fuel efficiency is now shown in L/100km."
+
+[invite]
+about = "Gives out the invite links for the bot and for its support server."
+
+[invite.commands.bot]
+usage = "/invite bot"
+private = true
+reply = "https://discord.com/oauth2/authorize?client_id=…&scope=bot+applications.commands"
+
+[invite.commands.guild]
+usage = "/invite guild"
+private = true
+reply = "https://discord.gg/… (a single-use invite that expires after a minute)"
+
+[reminder]
+about = """
+Set a reminder for yourself. The bot sends it to you as a direct message when it is due, so you need to allow direct messages from server members."""
+
+[reminder.commands.add]
+usage = "/reminder add reminder:Call mum hours:2"
+kind = "embed"
+private = true
+reply = """
+On Wednesday 4 November 2026 14:00 (in 2 hours) I will remind you of
+`Call mum`
+Use /reminder remove to cancel it."""
+
+[reminder.commands.remove]
+usage = "/reminder remove reminder:Call mum"
+kind = "embed"
+private = true
+reply = """
+Removed your reminder of
+`Call mum`"""
+
+[reminder.commands.repeat]
+usage = "/reminder repeat reminder:Stand up and stretch hours:1"
+kind = "embed"
+private = true
+reply = """
+On Wednesday 4 November 2026 13:00 (in 1 hour) and then every so often I will remind you of
+`Stand up and stretch`
+Use /reminder remove to cancel it."""
+
+[stats]
+about = """
+Shows member counts for the server, and keeps a category of voice channels whose names show them (users, bots, online and the peak), so everyone can see the numbers at a glance."""
+setup = """
+`/stats add` creates the category and its channels. The bot needs the Manage Channels permission."""
+
+[stats.commands.add]
+usage = "/stats add"
+kind = "embed"
+private = true
+reply = "Stats channels are set up."
+
+[stats.commands.remove]
+usage = "/stats remove"
+kind = "embed"
+private = true
+reply = "Removed the stats channels."
+
+[stats.commands.reset]
+usage = "/stats reset"
+who = "The bot's owners, in a server."
+kind = "embed"
+private = true
+reply = "Reset the stats channels of 12 servers."
+
+[stats.commands.show]
+usage = "/stats show"
+kind = "embed"
+reply = """
+**My Server Stats**
+Information about My Server
+Users: 128 · Bots: 6 · Online: 41
+Created on: Monday 1 January 2024 (2 years ago)
+AFK channel: #AFK"""
+
+[steam]
+about = """
+Get a direct message when a Steam game goes free or on sale, or look through the sales on right now. You choose the smallest discount that is worth a message."""
+setup = """
+Allow direct messages from server members, or the bot can't reach you."""
+
+[steam.commands.add]
+usage = "/steam add"
+kind = "embed"
+private = true
+reply = """
+I will notify you of new steam games!
+Use /steam show to view current sales."""
+
+[steam.commands.percentage]
+usage = "/steam percentage percent:50"
+kind = "embed"
+private = true
+reply = "Changed your sale notification threshold to 50%."
+
+[steam.commands.remove]
+usage = "/steam remove"
+kind = "embed"
+private = true
+reply = "I will no longer notify you of new steam games."
+
+[steam.commands.show]
+usage = "/steam show percent:75"
+kind = "card"
+reply = """
+A page of games on sale by 75% or more, with a price, the discount and a link for each, and buttons to page through them. Only you can use the buttons.
+If nothing is that cheap: No steam games found with sales 75% or higher."""
+
+[team]
+about = """
+Teams are saved groups of members with a captain. The captain invites and removes members; other members can leave. `/team split` draws temporary teams from a list of members, and each can be kept with a button."""
+
+[team.commands.captain]
+usage = "/team captain team:Red member:@Sam"
+who = "The captain of the team, in a server."
+kind = "embed"
+private = true
+reply = "@Sam is now captain of **Red**."
+
+[team.commands.create]
+usage = "/team create name:Red"
+kind = "embed"
+private = true
+reply = "Created **Red**; you're its captain."
+
+[team.commands.disband]
+usage = "/team disband team:Red"
+who = "The captain of the team, in a server."
+kind = "embed"
+private = true
+reply = "Disbanded **Red**."
+
+[team.commands.invite]
+usage = "/team invite team:Red member:@Sam"
+who = "The captain of the team, in a server."
+kind = "embed"
+reply = "@Sam, @You invites you to **Red**. (with a button only @Sam can use to join)"
+
+[team.commands.kick]
+usage = "/team kick team:Red member:@Sam"
+who = "The captain of the team, in a server."
+kind = "embed"
+private = true
+reply = "Removed @Sam from **Red**."
+
+[team.commands.leave]
+usage = "/team leave team:Red"
+kind = "embed"
+private = true
+reply = "You left **Red**."
+
+[team.commands.show]
+usage = "/team show team:Red"
+kind = "embed"
+reply = """
+**Red**
+Captain: @You
+Members (3): @You @Sam @Alex"""
+
+[team.commands.split]
+usage = "/team split teams:2"
+private = true
+reply = """
+Pick the members to split into 2 teams.
+(With a member picker. After you pick, the bot posts the teams for everyone, each with a Keep button.)"""
+
+[tournament]
+about = """
+Run a tournament in a channel. The sign-up card shows who has signed up and how the tournament stands, and the bot keeps it up to date. Sign-up is either solo, where the bot draws teams of the chosen size, or by captains who enter whole teams. Starting it draws a bracket, and each match gets a card for its drafts (bans and picks), votes, lineups and result."""
+setup = """
+Whoever runs `/tournament create` needs the Manage Server permission and organises the tournament. The bot needs permission to send messages and attach files in the channel where the card is posted."""
+
+[tournament.commands.ban]
+usage = "/tournament ban match:#3 Red vs Blue choice:Mirage"
+who = "The captain of a team in the match, in a server."
+kind = "embed"
+private = true
+reply = "Your team banned **Mirage** in match #3."
+
+[tournament.commands.bracket]
+usage = "/tournament bracket tournament:Spring cup"
+kind = "card"
+reply = "The tournament's card with the bracket drawn as an image: the matches and who won."
+
+[tournament.commands.cancel]
+usage = "/tournament cancel tournament:Spring cup"
+who = "The tournament's organiser, in a server."
+kind = "embed"
+reply = "**Spring cup** is called off."
+
+[tournament.commands.create]
+usage = "/tournament create name:Spring cup team_size:5"
+kind = "embed"
+private = true
+reply = """
+**Spring cup** is open for sign-up.
+(The sign-up card is posted in the channel for everyone.)"""
+
+[tournament.commands.enter]
+usage = "/tournament enter tournament:Spring cup team:Red"
+who = "The captain of the team, in a server."
+kind = "embed"
+private = true
+reply = "Your team **Red** is entered; add players with /tournament entry-add."
+
+[tournament.commands.entry-add]
+usage = "/tournament entry-add tournament:Spring cup player:@Sam"
+who = "The captain of the entry, in a server."
+kind = "embed"
+private = true
+reply = "Added @Sam to your entry."
+
+[tournament.commands.entry-remove]
+usage = "/tournament entry-remove tournament:Spring cup player:@Sam"
+who = "The captain of the entry, in a server."
+kind = "embed"
+private = true
+reply = "Removed @Sam from your entry."
+
+[tournament.commands.join]
+usage = "/tournament join tournament:Spring cup"
+kind = "embed"
+private = true
+reply = "You're signed up!"
+
+[tournament.commands.leave]
+usage = "/tournament leave tournament:Spring cup"
+kind = "embed"
+private = true
+reply = "You've left the tournament."
+
+[tournament.commands.lineup-in]
+usage = "/tournament lineup-in tournament:Spring cup player:@Sam reason:Stand-in"
+who = "The captain of the entry, in a server."
+kind = "embed"
+private = true
+reply = "Put @Sam in your lineup."
+
+[tournament.commands.lineup-out]
+usage = "/tournament lineup-out tournament:Spring cup player:@Sam reason:Illness"
+who = "The captain of the entry, in a server."
+kind = "embed"
+private = true
+reply = "Took @Sam out of your lineup."
+
+[tournament.commands.log]
+usage = "/tournament log tournament:Spring cup match:#3 Red vs Blue"
+who = "The organiser, or a captain of the match's two entries, in a server."
+kind = "embed"
+private = true
+reply = """
+**Log: #3 Red vs Blue**
+One line per phase, draft, vote, lineup change and the result. A match with no history says: Nothing has been logged yet."""
+
+[tournament.commands.match]
+usage = "/tournament match match:#3 Red vs Blue"
+kind = "card"
+reply = "The match's card: its teams, phase and result. The organiser manages the match with the card's buttons."
+
+[tournament.commands.pick]
+usage = "/tournament pick match:#3 Red vs Blue choice:Inferno"
+who = "The captain of a team in the match, in a server."
+kind = "embed"
+private = true
+reply = "Your team picked **Inferno** in match #3."
+
+[tournament.commands.post]
+usage = "/tournament post tournament:Spring cup"
+kind = "embed"
+private = true
+reply = """
+Posted **Spring cup** here.
+(The tournament's card is posted in the channel for everyone, and the bot edits it as the tournament goes on.)"""
+
+[tournament.commands.start]
+usage = "/tournament start tournament:Spring cup"
+who = "The tournament's organiser, in a server."
+kind = "card"
+reply = "Sign-up is closed, the teams are formed and the bracket is drawn. The bot posts the tournament's card with the bracket as an image."
+
+[tournament.commands.vote]
+usage = "/tournament vote match:#3 Red vs Blue question:Which map? answers:Mirage, Inferno, Nuke"
+who = "The tournament's organiser, in a server."
+kind = "card"
+reply = "A vote card for the match's players, with one button per answer and a button for the organiser to close the vote."
+
+[uptime]
+about = "Shows when the bot last started."
+
+[uptime.commands.bot]
+usage = "/uptime bot"
+reply = "Online since Tuesday 3 November 2026 09:00 (2 hours ago)"
+
+[urban]
+about = """
+Looks a word up on Urban Dictionary, or picks random entries. Entries are written by Urban Dictionary's users, so they can be rude."""
+
+[urban.commands.random]
+usage = "/urban random"
+kind = "embed"
+reply = """
+**Urban Dictionary: random**
+1. word
+The definition, then the thumbs up and thumbs down counts and a link to the entry. Up to the configured number of entries.
+Results are from api.urbandictionary.com"""
+
+[urban.commands.search]
+usage = "/urban search query:touch grass"
+kind = "embed"
+reply = """
+**Urban Dictionary: touch grass**
+1. touch grass
+The definition, then the thumbs up and thumbs down counts and a link to the entry.
+Results are from api.urbandictionary.com
+(With no results: No definitions found for `touch grass`.)"""
+
+[voice]
+about = """
+Tools for the voice channel you are in. `/voice split` draws random teams from everyone in your channel."""
+setup = """
+With `move` on (the default), each team gets a Move button that moves its members to the team's voice channel. The bot needs the Move Members permission."""
+
+[voice.commands.split]
+usage = "/voice split teams:2"
+private = true
+reply = """
+Posted the teams in #General.
+(The teams are posted for everyone in the voice channel's chat, each with a Keep button and, if `move` is on, a Move button.)"""
