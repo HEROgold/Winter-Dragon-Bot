@@ -113,7 +113,7 @@ _Avoid_: Announcement, tournament channel
 ## Member stats
 
 **Profile**:
-A member's own pages on the dashboard, showing what they have done with each feature across every guild. Only that member sees it.
+A member's own pages on the dashboard, one per feature, showing and managing what they own with that feature across every guild. Only that member sees it.
 _Avoid_: Stats, dashboard (for the member pages), your data (that is the GDPR view)
 
 **Stats channel**:
