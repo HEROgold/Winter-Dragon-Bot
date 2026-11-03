@@ -484,6 +484,35 @@ def test_the_profile_lists_a_page_per_feature(member: TestClient) -> None:
     assert 'href="/profile/fuel"' in page.text
 
 
+def test_profile_pages_show_their_tabs_in_the_subnav(member: TestClient) -> None:
+    for path in ("/profile", "/profile/fuel"):
+        text = member.get(path).text
+
+        assert 'class="subnav"' in text
+        assert text.index('class="subnav"') < text.index("<main")
+
+    assert 'href="/profile/fuel" aria-current="page"' in member.get("/profile/fuel").text
+
+
+def test_pages_outside_the_profile_have_no_subnav(member: TestClient) -> None:
+    for path in ("/", "/me"):
+        assert 'class="subnav"' not in member.get(path).text
+
+
+def test_every_profile_tab_opens_its_page_with_the_tab_marked(member: TestClient) -> None:
+    text = member.get("/profile").text
+    subnav = re.search(r'<nav class="subnav".*?</nav>', text, re.DOTALL)
+    assert subnav is not None
+    hrefs = re.findall(r'href="(/profile/[^"]*)"', subnav.group(0))
+
+    assert hrefs
+    for href in hrefs:
+        response = member.get(href)
+
+        assert response.status_code == 200
+        assert f'href="{href}" aria-current="page"' in response.text
+
+
 def test_the_dashboard_links_to_the_profile(member: TestClient) -> None:
     assert 'href="/profile"' in member.get("/").text
     assert 'href="/profile"' in member.get("/me").text
