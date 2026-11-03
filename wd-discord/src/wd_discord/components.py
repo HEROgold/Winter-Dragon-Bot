@@ -22,6 +22,7 @@ lazy from wd_discord.limits import (
     MAX_BUTTON_LABEL_LENGTH,
     MAX_CUSTOM_ID_LENGTH,
     MAX_LABEL_LENGTH,
+    MAX_MEDIA_DESCRIPTION_LENGTH,
     MAX_MEDIA_GALLERY_ITEMS,
     MAX_MESSAGE_COMPONENTS,
     MAX_MODAL_TITLE_LENGTH,
@@ -206,7 +207,7 @@ class Thumbnail(BaseModel):
 
     type: Literal[ComponentType.THUMBNAIL] = ComponentType.THUMBNAIL
     media: UnfurledMediaItem
-    description: Annotated[str, StringConstraints(max_length=1024)] | None = None
+    description: Annotated[str, StringConstraints(max_length=MAX_MEDIA_DESCRIPTION_LENGTH)] | None = None
     """Alt text."""
     spoiler: bool = False
 
@@ -227,7 +228,7 @@ class MediaGalleryItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     media: UnfurledMediaItem
-    description: Annotated[str, StringConstraints(max_length=1024)] | None = None
+    description: Annotated[str, StringConstraints(max_length=MAX_MEDIA_DESCRIPTION_LENGTH)] | None = None
     """Alt text."""
     spoiler: bool = False
 

@@ -22,6 +22,8 @@ MAX_SELECT_OPTIONS = 25
 """A string select offers up to 25 options (https://docs.discord.com/developers/components/reference#string-select)."""
 MAX_SELECT_OPTION_LENGTH = 100
 """A select option's label, value and description hold up to 100 characters each (https://docs.discord.com/developers/components/reference#string-select-select-option-structure)."""
+MAX_MEDIA_DESCRIPTION_LENGTH = 1024
+"""A thumbnail's or media gallery item's alt text holds up to 1024 characters (https://docs.discord.com/developers/components/reference#thumbnail)."""
 MAX_CUSTOM_ID_LENGTH = 100
 """A component's ``custom_id`` holds up to 100 characters (https://docs.discord.com/developers/components/reference#anatomy-of-a-component-custom-id)."""
 MAX_BUTTON_LABEL_LENGTH = 80
