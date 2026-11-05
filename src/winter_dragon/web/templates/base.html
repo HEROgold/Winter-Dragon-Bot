@@ -1,3 +1,4 @@
+{% from "_components.html" import avatar %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -15,6 +16,7 @@
   </script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <a class="wordmark" href="/">Winter Dragon</a>
     {% if account %}
@@ -24,12 +26,8 @@
         {% if bot_owner %}<a href="/bot" {% if active == "bot" %}aria-current="page"{% endif %}>Bot stats</a>{% endif %}
       </nav>
       <div class="account">
-        {% if account.avatar_url %}
-          <img class="avatar" src="{{ account.avatar_url }}" alt="">
-        {% else %}
-          <span class="avatar" aria-hidden="true">{{ account.initials }}</span>
-        {% endif %}
-        {{ account.display_name }}
+        {{ avatar(account) }}
+        <span class="account-name">{{ account.display_name }}</span>
         <form method="post" action="/auth/logout" class="sign-out">
           <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
           <button class="button button-quiet button-small" type="submit">Sign out</button>
@@ -45,10 +43,5 @@
   {% block subnav %}{% endblock %}
 
   {% block main %}{% endblock %}
-
-  <footer class="site-footer">
-    <a href="/">Winter Dragon</a>
-    {% if account %}<a href="/me">Your data</a>{% endif %}
-  </footer>
 </body>
 </html>
