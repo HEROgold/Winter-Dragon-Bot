@@ -45,7 +45,7 @@ class Named:
     status: LookupStatus
     name: str | None = None
     image_url: str | None = None
-    guild_id: "Snowflake | None" = None
+    guild_id: Snowflake | None = None
     """The guild the entity is in, for a channel or role; ``None`` for a user or guild."""
 
 
@@ -54,7 +54,7 @@ class ReferenceLink:
     """One Discord ID as a page shows it: the entity's name linking to its card, or the plain ID with a note."""
 
     kind: ReferenceKind
-    id: "Snowflake"
+    id: Snowflake
     status: LookupStatus
     name: str | None = None
     href: str | None = None
@@ -77,7 +77,7 @@ class ReferenceLink:
                 return "Couldn't load the name right now."
 
 
-def card_path(kind: ReferenceKind, id: "Snowflake", guild_id: "Snowflake | None" = None) -> str:  # noqa: A002 - Discord's name for it
+def card_path(kind: ReferenceKind, id: Snowflake, guild_id: Snowflake | None = None) -> str:  # noqa: A002 - Discord's name for it
     """Return the address of the card of ``id``; a role's includes its ``guild_id``, which Discord needs to fetch it."""
     if kind is ReferenceKind.ROLE:
         if guild_id is None:
@@ -87,7 +87,7 @@ def card_path(kind: ReferenceKind, id: "Snowflake", guild_id: "Snowflake | None"
     return f"/cards/{kind}/{id}"
 
 
-def link(kind: ReferenceKind, id: "Snowflake", named: Named, *, guild_id: "Snowflake | None" = None) -> ReferenceLink:  # noqa: A002 - Discord's name for it
+def link(kind: ReferenceKind, id: Snowflake, named: Named, *, guild_id: Snowflake | None = None) -> ReferenceLink:  # noqa: A002 - Discord's name for it
     """Return the reference link for ``id``, given what Discord said about it."""
     if named.status is not LookupStatus.FOUND:
         return ReferenceLink(kind, id, named.status)
@@ -98,7 +98,7 @@ def link(kind: ReferenceKind, id: "Snowflake", named: Named, *, guild_id: "Snowf
 class Directory(Protocol):
     """Asks Discord for the names of entities; the web app's :class:`~winter_dragon.web.discord_lookup.DiscordLookup`."""
 
-    async def users(self, ids: "Iterable[Snowflake]") -> "dict[Snowflake, Named]":
+    async def users(self, ids: Iterable[Snowflake]) -> dict[Snowflake, Named]:
         """Return what Discord says about each user."""
         ...
 
@@ -112,7 +112,7 @@ class References:
 
     directory: Directory | None = None
 
-    def users(self, ids: "Iterable[Snowflake]") -> tuple[ReferenceLink, ...]:
+    def users(self, ids: Iterable[Snowflake]) -> tuple[ReferenceLink, ...]:
         """Return a reference link for each user ID, in order."""
         wanted = tuple(ids)
         if self.directory is None:
@@ -122,6 +122,6 @@ class References:
         unavailable = Named(LookupStatus.UNAVAILABLE)
         return tuple(link(ReferenceKind.USER, user, found.get(user, unavailable)) for user in wanted)
 
-    def user(self, id: "Snowflake") -> ReferenceLink:  # noqa: A002 - Discord's name for it
+    def user(self, id: Snowflake) -> ReferenceLink:  # noqa: A002 - Discord's name for it
         """Return the reference link of one user."""
         return self.users((id,))[0]

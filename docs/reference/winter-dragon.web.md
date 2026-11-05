@@ -34,7 +34,7 @@ A page that needs a signed-in account was opened without one.
 The dashboard's FastAPI app: its pages, the session cookie they share, and where a page that needs sign-in sends you.
 
 - module names: SESSION_COOKIE
-- `create_app(*, bind: Engine, session_secret: str, session_lifetime: timedelta=timedelta(days=14), https_only: bool=False) -> FastAPI` — Return the dashboard on the database ``bind``, its session cookie signed with ``session_secret``.
+- `create_app(*, bind: Engine, session_secret: str, session_lifetime: timedelta=timedelta(days=14), https_only: bool=False, lookup: DiscordLookup | None=None) -> FastAPI` — Return the dashboard on the database ``bind``, its session cookie signed with ``session_secret``.
 
 ## `winter_dragon.web.auth` — `src/winter_dragon/web/auth.py`
 Signing in with Discord and out again; the callback sets the HttpOnly session cookie, never a token.
@@ -55,6 +55,31 @@ The latest snapshot, and whether it's too old to trust.
 
 - fields: stats: BotStats | None, age: timedelta | None, stale: bool
 - `@classmethod at(stats: BotStats | None, now: datetime, interval: float) -> StatsView` — Return the view of ``stats`` at ``now``, stale past :data:`STALE_INTERVALS` times ``interval`` seconds.
+
+## `winter_dragon.web.discord_lookup` — `src/winter_dragon/web/discord_lookup.py`
+Asking Discord what a user, channel, role or guild is called, through a REST-only bot client with a short cache.
+
+- module names: CACHE_LIFETIME, logger
+- `named_user(fetched: Fetched[User]) -> Named` — Return what a user's name and picture are, for a reference link.
+- `named_channel(fetched: Fetched[Channel]) -> Named` — Return what a channel is called and which guild it is in, for a reference link.
+- `named_role(fetched: Fetched[Role]) -> Named` — Return what a role is called and which guild it is in, for a reference link.
+- `named_guild(fetched: Fetched[Guild]) -> Named` — Return what a guild is called and its icon, for a reference link.
+
+### `@dataclass class Fetched[T]`
+The outcome of fetching one entity: its status, and the entity itself when found.
+
+- fields: status: LookupStatus, entity: T | None
+- `@classmethod failed(error: NetworkError) -> Self` — Return the outcome for a request that failed: unknown when Discord has no such thing, else unavailable.
+
+### `class DiscordLookup`
+The bot's REST client, and the names it has fetched; open it with ``async with`` before use.
+
+- `@property client -> Client` — The open client; raises when the lookup wasn't opened.
+- `async user(user_id: Snowflake) -> Fetched[User]` — Fetch a user.
+- `async channel(channel_id: Snowflake) -> Fetched[Channel]` — Fetch a channel.
+- `async guild(guild_id: Snowflake) -> Fetched[Guild]` — Fetch a guild, with its member counts.
+- `async role(guild_id: Snowflake, role_id: Snowflake) -> Fetched[Role]` — Fetch a role of a guild.
+- `async users(ids: Iterable[Snowflake]) -> dict[Snowflake, Named]` — Return what Discord says about each of the users ``ids``, asking for them together.
 
 ## `winter_dragon.web.discord_oauth` — `src/winter_dragon/web/discord_oauth.py`
 Signing in with Discord: the OAuth2 authorization code grant, used only to learn who is signing in.
@@ -116,7 +141,7 @@ The Profile: a member's own pages, one per feature, across every guild.
 ### `@dataclass class ProfileContext`
 What a Profile page reads to build itself: the database, the member whose Profile it is, and their time zone.
 
-- fields: bind: Engine, member_id: Snowflake, zone: ZoneInfo
+- fields: bind: Engine, member_id: Snowflake, zone: ZoneInfo, references: References
 
 ### `@dataclass class ProfilePage`
 One feature's page in the Profile.
@@ -281,6 +306,46 @@ The redirect page: opens an app link (``steam://...``) from Discord, which only 
 - module names: router, MOBILE_HINT, PHONE_AGENTS
 - `is_phone(headers: Mapping[str, str]) -> bool` — Whether the request ``headers`` come from a phone: by its client hint, else by its ``User-Agent``.
 - `@router.get open_link(request: Request, uri: str='', mobile: str | None=None, fallback: str | None=None) -> Response` — Open ``uri``, or ``mobile`` on a phone, with a button in case the browser blocks it and a ``fallback`` page.
+
+## `winter_dragon.web.references` — `src/winter_dragon/web/references.py`
+Reference links: how a dashboard page shows a Discord ID, as the entity's name linking to its card.
+
+- `card_path(kind: ReferenceKind, id: Snowflake, guild_id: Snowflake | None=None) -> str` — Return the address of the card of ``id``; a role's includes its ``guild_id``, which Discord needs to fetch it.
+- `link(kind: ReferenceKind, id: Snowflake, named: Named, *, guild_id: Snowflake | None=None) -> ReferenceLink` — Return the reference link for ``id``, given what Discord said about it.
+
+### `class ReferenceKind(StrEnum)`
+What a reference link points at; the path segment of its card is the value.
+
+- attributes: USER, CHANNEL, ROLE, GUILD
+
+### `class LookupStatus(StrEnum)`
+How asking Discord for an entity's name went.
+
+- attributes: FOUND, UNKNOWN, UNAVAILABLE
+
+### `@dataclass class Named`
+What Discord said about one entity: its status, and its name and picture when found.
+
+- fields: status: LookupStatus, name: str | None, image_url: str | None, guild_id: Snowflake | None
+
+### `@dataclass class ReferenceLink`
+One Discord ID as a page shows it: the entity's name linking to its card, or the plain ID with a note.
+
+- fields: kind: ReferenceKind, id: Snowflake, status: LookupStatus, name: str | None, href: str | None
+- `@property label -> str` — The entity's name, or the plain ID when there is no name.
+- `@property note -> str | None` — A short remark for a reference that couldn't be named; ``None`` when it could.
+
+### `class Directory(Protocol)`
+Asks Discord for the names of entities; the web app's :class:`~winter_dragon.web.discord_lookup.DiscordLookup`.
+
+- `async users(ids: Iterable[Snowflake]) -> dict[Snowflake, Named]` — Return what Discord says about each user.
+
+### `@dataclass class References`
+Builds the reference links of a page, from a sync page builder that runs in a worker thread.
+
+- fields: directory: Directory | None
+- `users(ids: Iterable[Snowflake]) -> tuple[ReferenceLink, ...]` — Return a reference link for each user ID, in order.
+- `user(id: Snowflake) -> ReferenceLink` — Return the reference link of one user.
 
 ## `winter_dragon.web.responses` — `src/winter_dragon/web/responses.py`
 Rendering the dashboard's templates, as a whole page or as the fragment an htmx request swaps in.
