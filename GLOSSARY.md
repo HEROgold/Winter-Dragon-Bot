@@ -28,6 +28,14 @@ _Avoid_: Host, tournament admin
 A guild that has removed the bot. Its data is kept for a grace period so re-adding the bot restores its setup, then removed.
 _Avoid_: Left guild, inactive guild
 
+**Card**:
+A page on the dashboard that shows one Discord entity: a user, channel, role or guild. A signed-in member opens a card only for an entity they share a guild with.
+_Avoid_: Profile card, entity page, detail page
+
+**Reference link**:
+A link from a dashboard page to a card, showing the entity's name instead of its ID. When the name can't be looked up, it shows the plain ID with a short note.
+_Avoid_: Mention, ID link
+
 ## Archive
 
 **Archive**:
