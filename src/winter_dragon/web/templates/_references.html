@@ -1,0 +1,7 @@
+{% macro reference(link) -%}
+  {%- if link.href -%}
+    <a href="{{ link.href }}">{{ link.label }}</a>
+  {%- else -%}
+    <span class="reference-plain">{{ link.label }}</span> <small class="reference-note">{{ link.note }}</small>
+  {%- endif -%}
+{%- endmacro %}
