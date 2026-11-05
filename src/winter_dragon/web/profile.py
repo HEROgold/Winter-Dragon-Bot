@@ -35,7 +35,7 @@ lazy from winter_dragon.web.responses import database, render, render_mapping, s
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
-    from sqlmodel import SQLModel
+    from wd_db.extension.lifecycle import LifecycleModel
     from wd_discord.snowflake import Snowflake
     from zoneinfo import ZoneInfo
 
@@ -121,11 +121,11 @@ def profile_pages() -> list[ProfilePage]:
     return sorted(_pages.values(), key=lambda page: page.title.casefold())
 
 
-def has_rows(model: type[SQLModel]) -> UsedCheck:
+def has_rows(model: type[LifecycleModel]) -> UsedCheck:
     """Return a ``used`` check that is true when the member owns a row of ``model``."""
 
     def check(session: Session, context: ProfileContext) -> bool:
-        return session.exec(owned_by(model, member=context.member_id).limit(1)).first() is not None  # pyrefly: ignore[bad-argument-type] - owned_by takes lifecycle models
+        return session.exec(owned_by(model, member=context.member_id).limit(1)).first() is not None
 
     return check
 
@@ -173,7 +173,7 @@ def profile(request: Request) -> Response:
     page = next((page for page in profile_pages() if page.slug == last), None)
     if page is not None:
         return see_other(page.path)
-    return render(request, "profile/index.html", page=None, **tabs(request))
+    return render_mapping(request, "profile/index.html", {"page": None, **tabs(request)})
 
 
 @router.get("/{slug}")

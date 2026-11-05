@@ -101,10 +101,13 @@ What the landing page's signpost arms say a signed-in member will find down each
 ## `winter_dragon.web.profile` — `src/winter_dragon/web/profile.py`
 The Profile: a member's own pages, one per feature, across every guild.
 
-- module names: router, LAST_TAB_COOKIE, LAST_TAB_LIFETIME
+- module names: logger, router, LAST_TAB_COOKIE, LAST_TAB_LIFETIME
 - `type ContextBuilder = Callable[[ProfileContext], Mapping[str, object]]`
-- `profile_page(*, slug: str, title: str, template: str, router: APIRouter | None=None) -> Callable[[ContextBuilder], ContextBuilder]` — Register the decorated function as the context builder of a Profile page; return it unchanged.
+- `type UsedCheck = Callable[[Session, ProfileContext], bool]`
+- `profile_page(*, slug: str, title: str, template: str, router: APIRouter | None=None, used: UsedCheck | None=None) -> Callable[[ContextBuilder], ContextBuilder]` — Register the decorated function as the context builder of a Profile page; return it unchanged.
 - `profile_pages() -> list[ProfilePage]` — Return every registered page, by title.
+- `has_rows(model: type[LifecycleModel]) -> UsedCheck` — Return a ``used`` check that is true when the member owns a row of ``model``.
+- `tabs(request: Request) -> dict[str, object]` — Return the tab bar's context: ``pages`` with the ones in use first, and ``unused``, the slugs of the others.
 - `load_profile_pages() -> None` — Import every module in ``web/profile_pages/``, so each registers its page.
 - `@router.get profile(request: Request) -> Response` — Reopen the Profile page the member last opened; without one, show the intro under the tab bar.
 - `@router.get profile_page_view(request: Request, slug: str, account: Account, bind: Engine) -> Response` — Show the signed-in member's page ``slug`` of the Profile.
@@ -118,7 +121,8 @@ What a Profile page reads to build itself: the database, the member whose Profil
 ### `@dataclass class ProfilePage`
 One feature's page in the Profile.
 
-- fields: slug: str, title: str, template: str, context: ContextBuilder, router: APIRouter | None
+- fields: slug: str, title: str, template: str, context: ContextBuilder, router: APIRouter | None, used: UsedCheck |
+  None
 - `@property path -> str` — The URL the page is served at.
 
 ## `winter_dragon.web.profile_pages.fuel` — `src/winter_dragon/web/profile_pages/fuel.py`
