@@ -620,6 +620,8 @@ img.avatar { object-fit: cover; }
 .subnav { display: flex; gap: 1.5rem; padding: 0 clamp(1rem, 4vw, 3rem); border-bottom: 1px solid var(--line); background: var(--paper); overflow-x: auto; }
 .subnav a { position: relative; display: flex; align-items: center; min-height: 2.75rem; color: var(--slate); text-decoration: none; white-space: nowrap; }
 .subnav a[aria-current="page"] { color: var(--granite); font-weight: 600; }
+.subnav a.is-unused { opacity: 0.55; } /* nothing there yet: sorted last, so the tabs with content come first */
+.subnav a.is-unused:hover, .subnav a.is-unused:focus-visible, .subnav a.is-unused[aria-current="page"] { opacity: 1; }
 .profile-empty { color: var(--slate); }
 .profile-graph { margin: 0 0 2rem; max-width: 40rem; }
 .profile-graph svg { width: 100%; height: auto; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-panel); }

@@ -12,6 +12,9 @@ on start-up) and a template under ``templates/profile/``, then register the page
 The template extends ``profile/base.html`` and gets the returned dict as its context, plus ``pages`` and ``page``.
 The Profile lists the page, serves it at ``/profile/<slug>`` and keeps it to the signed-in member. ``/profile``
 reopens the page the member last opened.
+
+A page that has nothing to show until the member uses the feature passes ``used``, a check of whether it has
+something for the member. The tab bar puts pages without anything after the others and dims them.
 """
 
 from dataclasses import dataclass
@@ -22,15 +25,16 @@ lazy from fastapi import HTTPException, Request, status
 lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
 
-lazy from winter_dragon.web.accounts import Account, signed_in, visitor_zone
+lazy from winter_dragon.web.accounts import Account, current_account, signed_in, visitor_zone
 lazy from winter_dragon.web.responses import database, render, render_mapping, see_other
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
-
-    from wd_discord.snowflake import Snowflake
     from zoneinfo import ZoneInfo
+
+    from sqlmodel import SQLModel
+    from wd_discord.snowflake import Snowflake
 
 
 router = APIRouter(prefix="/profile")
@@ -40,6 +44,7 @@ LAST_TAB_LIFETIME = 60 * 60 * 24 * 365
 """How long, in seconds, the browser keeps :data:`LAST_TAB_COOKIE`: a year."""
 
 type ContextBuilder = Callable[[ProfileContext], Mapping[str, object]]
+type UsedCheck = Callable[[ProfileContext], bool]
 
 
 @dataclass(frozen=True)
@@ -66,6 +71,8 @@ class ProfilePage:
     """Builds the template's context for one member."""
     router: APIRouter | None = None
     """Extra routes of the page, mounted under :attr:`path`."""
+    used: UsedCheck | None = None
+    """Whether the page has something for a member; ``None`` for a page that is useful when empty."""
 
     @property
     def path(self) -> str:
@@ -82,14 +89,23 @@ def profile_page(
     title: str,
     template: str,
     router: APIRouter | None = None,
+    used: UsedCheck | None = None,
 ) -> Callable[[ContextBuilder], ContextBuilder]:
     """Register the decorated function as the context builder of a Profile page; return it unchanged.
 
-    The app mounts ``router``, when given, under the page's path.
+    The app mounts ``router``, when given, under the page's path. ``used`` tells the tab bar whether the member
+    has anything on the page; without it the page always counts as in use.
     """
 
     def register(context: ContextBuilder) -> ContextBuilder:
-        _pages[slug] = ProfilePage(slug=slug, title=title, template=template, context=context, router=router)
+        _pages[slug] = ProfilePage(
+            slug=slug,
+            title=title,
+            template=template,
+            context=context,
+            router=router,
+            used=used,
+        )
         return context
 
     return register
@@ -99,6 +115,33 @@ def profile_pages() -> list[ProfilePage]:
     """Return every registered page, by title."""
     load_profile_pages()
     return sorted(_pages.values(), key=lambda page: page.title.casefold())
+
+
+def has_rows(model: type[SQLModel]) -> UsedCheck:
+    """Return a ``used`` check that is true when the member owns a row of ``model``."""
+
+    def check(context: ProfileContext) -> bool:
+        from sqlmodel import Session  # noqa: PLC0415
+        from wd_db.extension.lifecycle import owned_by  # noqa: PLC0415
+
+        with Session(context.bind) as session:
+            return session.exec(owned_by(model, member=context.member_id).limit(1)).first() is not None  # pyrefly: ignore[bad-argument-type] - owned_by takes lifecycle models
+
+    return check
+
+
+def tabs(request: Request) -> dict[str, object]:
+    """Return the tab bar's context: ``pages`` with the ones in use first, and ``unused``, the slugs of the others.
+
+    Each group stays in title order. Without a signed-in member every page counts as in use.
+    """
+    pages = profile_pages()
+    account = current_account(request)
+    if account is None:
+        return {"pages": pages, "unused": frozenset[str]()}
+    context = ProfileContext(bind=request.app.state.bind, member_id=account.id, zone=visitor_zone(request))
+    unused = frozenset(page.slug for page in pages if page.used is not None and not page.used(context))
+    return {"pages": sorted(pages, key=lambda page: page.slug in unused), "unused": unused}
 
 
 def load_profile_pages() -> None:
@@ -119,7 +162,7 @@ def profile(request: Request) -> Response:
     page = next((page for page in profile_pages() if page.slug == last), None)
     if page is not None:
         return see_other(page.path)
-    return render(request, "profile/index.html", pages=profile_pages(), page=None)
+    return render(request, "profile/index.html", page=None, **tabs(request))
 
 
 @router.get("/{slug}")
@@ -170,6 +213,6 @@ def render_profile_page(
     return render_mapping(
         request,
         page.template,
-        {"pages": profile_pages(), "page": page, **context},
+        {**tabs(request), "page": page, **context},
         status_code=status_code,
     )

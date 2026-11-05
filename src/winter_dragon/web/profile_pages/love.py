@@ -5,10 +5,10 @@ lazy from wd_db.extension.lifecycle import owned_by
 lazy from wd_discord.snowflake import Snowflake
 
 lazy from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
-lazy from winter_dragon.web.profile import ProfileContext, profile_page
+lazy from winter_dragon.web.profile import ProfileContext, has_rows, profile_page
 
 
-@profile_page(slug="love", title="Love", template="profile/love.html")
+@profile_page(slug="love", title="Love", template="profile/love.html", used=has_rows(CompatibilityCheck))
 def love(context: ProfileContext) -> dict[str, object]:
     """Return the love page's context: the member's checks with their percentage, highest first, then newest."""
     with Session(context.bind) as session:

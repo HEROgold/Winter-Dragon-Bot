@@ -551,6 +551,40 @@ def test_every_profile_tab_opens_its_page_with_the_tab_marked(member: TestClient
         assert f'href="{href}" aria-current="page"' in response.text
 
 
+def _tabs(member: TestClient) -> list[tuple[str, bool]]:
+    """Return the Profile's tabs in order, each as its slug and whether it is dimmed."""
+    subnav = re.search(r'<nav class="subnav".*?</nav>', member.get("/profile").text, re.DOTALL)
+    assert subnav is not None
+    return [
+        (slug, "is-unused" in attributes)
+        for slug, attributes in re.findall(r'<a href="/profile/([^"]*)"([^>]*)>', subnav.group(0))
+    ]
+
+
+def test_profile_tabs_without_anything_for_you_come_last_and_are_dimmed(member: TestClient) -> None:
+    tabs = _tabs(member)
+
+    in_use = [slug for slug, dimmed in tabs if not dimmed]
+    assert in_use == ["incremental", "reminders"]  # useful when empty
+    assert [slug for slug, _ in tabs][: len(in_use)] == in_use
+    assert {"love", "fuel", "steam", "urban", "hangman", "teams"} <= {slug for slug, dimmed in tabs if dimmed}
+
+
+def test_a_profile_tab_with_your_data_moves_forward_and_is_not_dimmed(member: TestClient, bind: Engine) -> None:
+    seed(bind, _check(7, "Someone"))
+
+    tabs = _tabs(member)
+
+    assert ("love", False) in tabs
+    assert tabs.index(("love", False)) < tabs.index(("fuel", True))
+
+
+def test_the_profile_tab_of_the_page_you_are_on_is_not_dimmed(member: TestClient) -> None:
+    text = member.get("/profile/love").text
+
+    assert 'href="/profile/love" aria-current="page"' in text
+
+
 def test_the_profile_shows_its_intro_on_a_first_visit(member: TestClient) -> None:
     response = member.get("/profile", follow_redirects=False)
 

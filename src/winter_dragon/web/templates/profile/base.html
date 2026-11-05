@@ -6,7 +6,7 @@
 {% block subnav %}
 <nav class="subnav" aria-label="Profile pages">
   {% for tab in pages %}
-    <a href="{{ tab.path }}" {% if page and tab.slug == page.slug %}aria-current="page"{% endif %}>{{ tab.title }}</a>
+    <a href="{{ tab.path }}"{% if page and tab.slug == page.slug %} aria-current="page"{% endif %}{% if tab.slug in unused %} class="is-unused" title="Nothing here yet"{% endif %}>{{ tab.title }}</a>
   {% endfor %}
 </nav>
 {% endblock %}
@@ -14,9 +14,7 @@
 {% block main %}
 <main class="page" id="main">
   <h1 class="page-title">{{ page.title if page else "Profile" }}</h1>
-  {% block lead %}
-    {% if not page %}<p class="page-lead">See and manage what you own with each feature, across every server. Only you see this.</p>{% endif %}
-  {% endblock %}
+  {% block lead %}{% endblock %}
 
   {% block profile %}{% endblock %}
 </main>
