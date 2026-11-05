@@ -1,7 +1,6 @@
 """The Profile's teams page: the member's lasting teams, with their captain, members, and the tournaments each one entered."""
 
 lazy from dataclasses import dataclass
-lazy from typing import cast
 
 lazy from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import alive
@@ -60,15 +59,14 @@ def _entries_of(session: Session, team_id: int) -> tuple[EntryRow, ...]:
     return tuple(EntryRow(tournament=tournament.name, result=_result(entry, tournament)) for entry, tournament in pairs)
 
 
-def _lasting_teams(session: Session, member_id: Snowflake) -> list[Team]:
-    """Return the member's lasting teams, by name."""
-    return [team for team in teams_of(session, member_id) if team.kind is TeamKind.LASTING and team.id is not None]
+def _lasting_teams(session: Session, member_id: Snowflake) -> list[tuple[int, Team]]:
+    """Return the member's lasting teams with their IDs, by name."""
+    return [(team.id, team) for team in teams_of(session, member_id) if team.kind is TeamKind.LASTING and team.id is not None]
 
 
-def _in_a_team(context: ProfileContext) -> bool:
+def _in_a_team(session: Session, context: ProfileContext) -> bool:
     """Whether the member is in a lasting team."""
-    with Session(context.bind) as session:
-        return bool(_lasting_teams(session, context.member_id))
+    return bool(_lasting_teams(session, context.member_id))
 
 
 @profile_page(slug="teams", title="Teams", template="profile/teams.html", used=_in_a_team)
@@ -80,8 +78,8 @@ def teams(context: ProfileContext) -> dict[str, object]:
                 name=team.name,
                 captain_id=None if team.captain_id is None else Snowflake(team.captain_id),
                 member_ids=tuple(Snowflake(member.user_id) for member in members_of(session, team)),
-                entries=_entries_of(session, cast("int", team.id)),  # _lasting_teams keeps teams that have an ID
+                entries=_entries_of(session, team_id),
             )
-            for team in _lasting_teams(session, context.member_id)
+            for team_id, team in _lasting_teams(session, context.member_id)
         ]
     return {"teams": rows, "formed": len(rows)}

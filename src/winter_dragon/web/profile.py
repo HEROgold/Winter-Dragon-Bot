@@ -23,7 +23,10 @@ lazy from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends
 lazy from fastapi import HTTPException, Request, status
 lazy from sqlalchemy import Engine  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from sqlmodel import Session
 lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from wd_db.extension.lifecycle import owned_by
+lazy from wd_discord.log import get_logger
 
 lazy from winter_dragon.web.accounts import Account, current_account, signed_in, visitor_zone
 lazy from winter_dragon.web.responses import database, render, render_mapping, see_other
@@ -37,6 +40,7 @@ if TYPE_CHECKING:
     from zoneinfo import ZoneInfo
 
 
+logger = get_logger(__name__)
 router = APIRouter(prefix="/profile")
 LAST_TAB_COOKIE = "profile_tab"
 """Holds the slug of the Profile page the member last opened."""
@@ -44,7 +48,7 @@ LAST_TAB_LIFETIME = 60 * 60 * 24 * 365
 """How long, in seconds, the browser keeps :data:`LAST_TAB_COOKIE`: a year."""
 
 type ContextBuilder = Callable[[ProfileContext], Mapping[str, object]]
-type UsedCheck = Callable[[ProfileContext], bool]
+type UsedCheck = Callable[[Session, ProfileContext], bool]
 
 
 @dataclass(frozen=True)
@@ -72,7 +76,7 @@ class ProfilePage:
     router: APIRouter | None = None
     """Extra routes of the page, mounted under :attr:`path`."""
     used: UsedCheck | None = None
-    """Whether the page has something for a member; ``None`` for a page that is useful when empty."""
+    """Whether the page has something for a member, given the tab bar's shared session; ``None`` if useful when empty."""
 
     @property
     def path(self) -> str:
@@ -120,12 +124,8 @@ def profile_pages() -> list[ProfilePage]:
 def has_rows(model: type[SQLModel]) -> UsedCheck:
     """Return a ``used`` check that is true when the member owns a row of ``model``."""
 
-    def check(context: ProfileContext) -> bool:
-        from sqlmodel import Session  # noqa: PLC0415
-        from wd_db.extension.lifecycle import owned_by  # noqa: PLC0415
-
-        with Session(context.bind) as session:
-            return session.exec(owned_by(model, member=context.member_id).limit(1)).first() is not None  # pyrefly: ignore[bad-argument-type] - owned_by takes lifecycle models
+    def check(session: Session, context: ProfileContext) -> bool:
+        return session.exec(owned_by(model, member=context.member_id).limit(1)).first() is not None  # pyrefly: ignore[bad-argument-type] - owned_by takes lifecycle models
 
     return check
 
@@ -140,8 +140,19 @@ def tabs(request: Request) -> dict[str, object]:
     if account is None:
         return {"pages": pages, "unused": frozenset[str]()}
     context = ProfileContext(bind=request.app.state.bind, member_id=account.id, zone=visitor_zone(request))
-    unused = frozenset(page.slug for page in pages if page.used is not None and not page.used(context))
+    with Session(context.bind) as session:
+        unused = frozenset(page.slug for page in pages if page.used is not None and not _is_used(page, session, context))
     return {"pages": sorted(pages, key=lambda page: page.slug in unused), "unused": unused}
+
+
+def _is_used(page: ProfilePage, session: Session, context: ProfileContext) -> bool:
+    """Run ``page``'s ``used`` check; a check that fails counts as in use, so one broken page leaves the tab bar working."""
+    try:
+        return page.used is None or page.used(session, context)
+    except Exception:
+        logger.exception(t"The {page.slug} Profile page's used check failed")
+        session.rollback()
+        return True
 
 
 def load_profile_pages() -> None:

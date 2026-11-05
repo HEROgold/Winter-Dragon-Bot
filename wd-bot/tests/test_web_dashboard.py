@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import textwrap
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
@@ -26,27 +27,18 @@ from wd_errors import Refused
 from winter_dragon.bot_stats import BotStats, ShardStats, store_snapshot
 from winter_dragon.cogs import import_cogs
 from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member_units
-
-
-from winter_dragon.cogs.fuel import CarFuels
-from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
-from winter_dragon.cogs.team import service as team_service
-from winter_dragon.cogs.team.models import TeamKind
-
-
+from winter_dragon.cogs.hangman.models import HangmanGame, HangmanParticipant, HangmanStatus
 from winter_dragon.cogs.incremental import game
 from winter_dragon.cogs.incremental.models import IncrementalSave, SaveGenerator
-
-
-from winter_dragon.cogs.hangman.models import HangmanGame, HangmanParticipant, HangmanStatus
+from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
 from winter_dragon.cogs.reminder import cog as reminder_cog
 from winter_dragon.cogs.reminder.cog import Reminders
 from winter_dragon.cogs.reminder.domain import Reminder, TimedReminder
 from winter_dragon.cogs.steam.models import SaleNotification
+from winter_dragon.cogs.team import service as team_service
+from winter_dragon.cogs.team.models import TeamKind
 from winter_dragon.cogs.tournament import service as tournaments
-from winter_dragon.cogs.tournament.models import TeamMode, Tournament, TournamentStatus, TournamentEntry
-
-
+from winter_dragon.cogs.tournament.models import TeamMode, Tournament, TournamentEntry, TournamentStatus
 from winter_dragon.cogs.urban import Lookup
 from winter_dragon.web import auth, bot_status, pages, profile
 from winter_dragon.web.app import create_app
@@ -205,7 +197,6 @@ def test_the_signed_in_account_keeps_its_discord_id_as_a_snowflake_through_the_s
 
 def test_the_oauth_access_token_is_a_token_hidden_from_repr() -> None:
     from wd_discord import Token
-
     from wd_discord.oauth import AccessToken
 
     granted = AccessToken.model_validate(
@@ -446,7 +437,9 @@ async def test_the_dashboard_and_the_reminder_command_accept_and_refuse_the_same
     cog = detached_cog(Reminders, engine=bot_engine, client=discord_client)
 
     response = member.post(
-        "/profile/reminders", data={"csrf_token": _csrf(member), "content": content, **form_time}, headers=HTMX
+        "/profile/reminders",
+        data={"csrf_token": _csrf(member), "content": content, **form_time},
+        headers=HTMX,
     )
     options = [InteractionDataOption(name="reminder", type=3, value=content)]
     options += [InteractionDataOption(name=unit, type=4, value=amount) for unit, amount in command_time.items()]
@@ -577,6 +570,20 @@ def test_a_profile_tab_with_your_data_moves_forward_and_is_not_dimmed(member: Te
 
     assert ("love", False) in tabs
     assert tabs.index(("love", False)) < tabs.index(("fuel", True))
+
+
+def test_a_failing_used_check_leaves_the_profile_working_and_its_tab_in_use(
+    member: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def broken(session: Session, context: profile.ProfileContext) -> bool:
+        raise RuntimeError
+
+    page = next(page for page in profile.profile_pages() if page.slug == "love")
+    monkeypatch.setitem(profile._pages, "love", replace(page, used=broken))  # noqa: SLF001
+
+    assert member.get("/profile/fuel").status_code == 200
+    assert ("love", False) in _tabs(member)
 
 
 def test_the_profile_tab_of_the_page_you_are_on_is_not_dimmed(member: TestClient) -> None:
@@ -737,7 +744,13 @@ def _hangman_game(
 ) -> None:
     finished = None if status is HangmanStatus.ACTIVE else NOW - timedelta(days=days_ago)
     game = HangmanGame(
-        guild_id=1, channel_id=2, word=word, letters=letters, wrong_words=wrong_words, status=status, finished_at=finished
+        guild_id=1,
+        channel_id=2,
+        word=word,
+        letters=letters,
+        wrong_words=wrong_words,
+        status=status,
+        finished_at=finished,
     )
     with Session(bind) as session:
         session.add(game)
@@ -999,7 +1012,12 @@ def _enter_tournaments(bind: Engine, team_name: str, tournaments: tuple[tuple[st
         assert team.id is not None
         for name, status, won in tournaments:
             tournament = Tournament(
-                guild_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2, status=status
+                guild_id=1,
+                organiser_id=OTHER_ID,
+                name=name,
+                mode=TeamMode.CAPTAINS,
+                team_size=2,
+                status=status,
             )
             session.add(tournament)
             session.commit()

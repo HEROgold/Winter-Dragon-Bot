@@ -620,8 +620,8 @@ img.avatar { object-fit: cover; }
 .subnav { display: flex; gap: 1.5rem; padding: 0 clamp(1rem, 4vw, 3rem); border-bottom: 1px solid var(--line); background: var(--paper); overflow-x: auto; }
 .subnav a { position: relative; display: flex; align-items: center; min-height: 2.75rem; color: var(--slate); text-decoration: none; white-space: nowrap; }
 .subnav a[aria-current="page"] { color: var(--granite); font-weight: 600; }
-.subnav a.is-unused { opacity: 0.55; } /* nothing there yet: sorted last, so the tabs with content come first */
-.subnav a.is-unused:hover, .subnav a.is-unused:focus-visible, .subnav a.is-unused[aria-current="page"] { opacity: 1; }
+.subnav a.is-unused { font-style: italic; } /* nothing there yet: sorted last, so the tabs with content come first; same color, so contrast holds */
+.subnav a.is-unused .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .profile-empty { color: var(--slate); }
 .profile-graph { margin: 0 0 2rem; max-width: 40rem; }
 .profile-graph svg { width: 100%; height: auto; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-panel); }
@@ -646,6 +646,6 @@ img.avatar { object-fit: cover; }
 .status-line.stale .live-dot { background: var(--ember); box-shadow: 0 0 0 4px #b83a2b33; }
 
 /* Doherty threshold: show at once that a request is in flight. */
-.htmx-request { opacity: 0.6; transition: opacity 200ms ease-out; cursor: progress; }
+:is(form, button, a).htmx-request { opacity: 0.6; transition: opacity 200ms ease-out; cursor: progress; }
 .game.htmx-request { opacity: 1; cursor: auto; } /* it polls by itself, so it would flash */
 .subnav a[aria-current="page"]::after { inset: auto 0 0 0; }

@@ -39,10 +39,9 @@ def _finished_games(member_id: Snowflake) -> SelectOfScalar[HangmanGame]:
     )
 
 
-def _played(context: ProfileContext) -> bool:
+def _played(session: Session, context: ProfileContext) -> bool:
     """Whether the member took part in a finished game."""
-    with Session(context.bind) as session:
-        return session.exec(_finished_games(context.member_id).limit(1)).first() is not None
+    return session.exec(_finished_games(context.member_id).limit(1)).first() is not None
 
 
 @profile_page(slug="hangman", title="Hangman", template="profile/hangman.html", used=_played)
