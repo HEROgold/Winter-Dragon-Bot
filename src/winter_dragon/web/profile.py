@@ -31,10 +31,10 @@ lazy from winter_dragon.web.responses import database, render, render_mapping, s
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
-    from zoneinfo import ZoneInfo
 
     from sqlmodel import SQLModel
     from wd_discord.snowflake import Snowflake
+    from zoneinfo import ZoneInfo
 
 
 router = APIRouter(prefix="/profile")
