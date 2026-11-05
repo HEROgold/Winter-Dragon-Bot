@@ -1,3 +1,4 @@
+{% from "_components.html" import table %}
 <div id="incremental" class="game" hx-get="{{ page.path }}/snapshot" hx-trigger="every {{ resync_seconds }}s, resync" hx-swap="outerHTML">
   {% if message %}<p class="game-message{% if refused %} game-refused{% endif %}" role="status">{{ message }}</p>{% endif %}
   {% if not snapshot %}
@@ -16,9 +17,7 @@
         </li>
       {% endfor %}
     </ul>
-    <table class="table">
-      <thead><tr><th>Generator</th><th>Owned</th><th>Next costs</th><th>Makes each</th><th></th></tr></thead>
-      <tbody>
+    {% call table(["Generator", "Owned", "Next costs", "Makes each", ""]) %}
         {% for offer in snapshot.offers %}
           <tr>
             <td><strong>{{ offer.name }}</strong><br>{{ offer.description }}</td>
@@ -41,8 +40,7 @@
             </td>
           </tr>
         {% endfor %}
-      </tbody>
-    </table>
+    {% endcall %}
     <p class="game-note">Production continues while you are away. Refreshes every {{ resync_seconds }} seconds.</p>
     <button class="button button-quiet button-small" type="button" onclick="htmx.trigger('#incremental', 'resync')">Refresh</button>
   {% endif %}

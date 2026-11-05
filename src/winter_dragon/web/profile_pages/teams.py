@@ -6,7 +6,7 @@ lazy from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import alive
 lazy from wd_discord.snowflake import Snowflake
 
-lazy from winter_dragon.cogs.team.models import TeamKind
+lazy from winter_dragon.cogs.team.models import Team, TeamKind
 lazy from winter_dragon.cogs.team.service import members_of, teams_of
 lazy from winter_dragon.cogs.tournament.models import Tournament, TournamentEntry, TournamentStatus
 lazy from winter_dragon.web.profile import ProfileContext, profile_page
@@ -59,7 +59,17 @@ def _entries_of(session: Session, team_id: int) -> tuple[EntryRow, ...]:
     return tuple(EntryRow(tournament=tournament.name, result=_result(entry, tournament)) for entry, tournament in pairs)
 
 
-@profile_page(slug="teams", title="Teams", template="profile/teams.html")
+def _lasting_teams(session: Session, member_id: Snowflake) -> list[tuple[int, Team]]:
+    """Return the member's lasting teams with their IDs, by name."""
+    return [(team.id, team) for team in teams_of(session, member_id) if team.kind is TeamKind.LASTING and team.id is not None]
+
+
+def _in_a_team(session: Session, context: ProfileContext) -> bool:
+    """Whether the member is in a lasting team."""
+    return bool(_lasting_teams(session, context.member_id))
+
+
+@profile_page(slug="teams", title="Teams", template="profile/teams.html", used=_in_a_team)
 def teams(context: ProfileContext) -> dict[str, object]:
     """Return the teams page context: lasting teams by name, each with captain, member IDs and tournament entries."""
     with Session(context.bind) as session:
@@ -68,9 +78,8 @@ def teams(context: ProfileContext) -> dict[str, object]:
                 name=team.name,
                 captain_id=None if team.captain_id is None else Snowflake(team.captain_id),
                 member_ids=tuple(Snowflake(member.user_id) for member in members_of(session, team)),
-                entries=_entries_of(session, team.id),
+                entries=_entries_of(session, team_id),
             )
-            for team in teams_of(session, context.member_id)
-            if team.kind is TeamKind.LASTING and team.id is not None
+            for team_id, team in _lasting_teams(session, context.member_id)
         ]
     return {"teams": rows, "formed": len(rows)}

@@ -3,7 +3,7 @@
 {% block title %}{% if error %}Can't open this link{% else %}Opening your app{% endif %} · {% endblock %}
 
 {% block main %}
-<main class="page">
+<main class="page" id="main">
   {% if error %}
     <h1 class="page-title">Can't open this link</h1>
     <p class="page-lead">{{ error }}</p>

@@ -4,10 +4,10 @@ lazy from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import owned_by
 
 lazy from winter_dragon.cogs.steam.models import SaleNotification
-lazy from winter_dragon.web.profile import ProfileContext, profile_page
+lazy from winter_dragon.web.profile import ProfileContext, has_rows, profile_page
 
 
-@profile_page(slug="steam", title="Steam", template="profile/steam.html")
+@profile_page(slug="steam", title="Steam", template="profile/steam.html", used=has_rows(SaleNotification))
 def steam(context: ProfileContext) -> dict[str, object]:
     """Return the Steam page's context: the member's sale notifications, newest first."""
     with Session(context.bind) as session:

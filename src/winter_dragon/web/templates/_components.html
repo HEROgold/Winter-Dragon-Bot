@@ -1,0 +1,19 @@
+{# Markup used by more than one page. Import what you need: {% from "_components.html" import avatar, table %} #}
+
+{% macro avatar(account) -%}
+  {% if account.avatar_url %}
+    <img class="avatar" src="{{ account.avatar_url }}" alt="">
+  {% else %}
+    <span class="avatar" aria-hidden="true">{{ account.initials }}</span>
+  {% endif %}
+{%- endmacro %}
+
+{# A table whose rows are the call block: {% call table(["Date", "Term"]) %}<tr>…</tr>{% endcall %} #}
+{% macro table(columns) -%}
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr>{% for column in columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
+      <tbody>{{ caller() }}</tbody>
+    </table>
+  </div>
+{%- endmacro %}
