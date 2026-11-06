@@ -301,7 +301,7 @@ The Profile's Steam page: the sales Steam DMs told the member about, newest firs
 ## `winter_dragon.web.profile_pages.teams` — `src/winter_dragon/web/profile_pages/teams.py`
 The Profile's teams page: the member's lasting teams, with their captain, members, and the tournaments each one entered.
 
-- `@profile_page teams(context: ProfileContext) -> dict[str, object]` — Return the teams page context: lasting teams by name, each with captain, member IDs and tournament entries.
+- `@profile_page teams(context: ProfileContext) -> dict[str, object]` — Return the teams page context: lasting teams by name, each with captain, members and tournament entries.
 
 ### `@dataclass class EntryRow`
 One tournament a team entered, and how it went for the team.
@@ -309,9 +309,9 @@ One tournament a team entered, and how it went for the team.
 - fields: tournament: str, result: str
 
 ### `@dataclass class TeamRow`
-One lasting team: its name, captain ID (None if unset), member IDs longest-standing first, and its tournament entries.
+One lasting team: its name, captain (None if unset), members longest-standing first, and its tournament entries.
 
-- fields: name: str, captain_id: Snowflake | None, member_ids: tuple[Snowflake, ...], entries: tuple[EntryRow, ...]
+- fields: name: str, captain: ReferenceLink | None, members: tuple[ReferenceLink, ...], entries: tuple[EntryRow, ...]
 
 ## `winter_dragon.web.profile_pages.urban` — `src/winter_dragon/web/profile_pages/urban.py`
 The Profile's Urban Dictionary page: the member's lookups, newest first, with a total.
