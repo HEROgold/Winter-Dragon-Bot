@@ -7,7 +7,7 @@ them is imported, because confkit reads a file once, when its settings class is 
 A migration only runs when the legacy file still holds something that moves or is dropped, so a second start
 does nothing. It then
 
-1. copies the legacy file to ``<name>.bak`` (or ``<name>.bak.1``, ``.2``, ... when that exists; a backup is
+1. copies the legacy file to ``<name>.bak`` next to it, or into the caller's backup directory (or ``<name>.bak.1``, ``.2``, ... when that exists; a backup is
    never overwritten),
 2. moves each matched key to its target file and section,
 3. drops every section and key no rule declares (they stay in the backup),
@@ -115,12 +115,13 @@ def _write(parser: configparser.ConfigParser, file: Path) -> None:
         parser.write(handle)
 
 
-def _backup_path(file: Path) -> Path:
-    backup = file.with_name(f"{file.name}.bak")
+def _backup_path(file: Path, directory: Path | None) -> Path:
+    folder = file.parent if directory is None else directory
+    backup = folder / f"{file.name}.bak"
     number = 0
     while backup.exists():
         number += 1
-        backup = file.with_name(f"{file.name}.bak.{number}")
+        backup = folder / f"{file.name}.bak.{number}"
     return backup
 
 
@@ -181,8 +182,12 @@ def _fill(file: Path, writes: Iterable[_Write]) -> list[str]:
     return kept
 
 
-def migrate(legacy: Path, moves: Iterable[Move]) -> MigrationReport | None:
-    """Migrate ``legacy`` by ``moves``; ``None`` when it holds nothing to move or drop (or doesn't exist)."""
+def migrate(legacy: Path, moves: Iterable[Move], backup_dir: Path | None = None) -> MigrationReport | None:
+    """Migrate ``legacy`` by ``moves``; ``None`` when it holds nothing to move or drop (or doesn't exist).
+
+    The backup goes next to ``legacy``, or into ``backup_dir`` (created when missing) for a read-only working
+    directory.
+    """
     if not legacy.exists():
         return None
     parser = _read(legacy)
@@ -190,7 +195,8 @@ def migrate(legacy: Path, moves: Iterable[Move]) -> MigrationReport | None:
     if not writes and not dropped and not defaulted:
         return None
 
-    backup = _backup_path(legacy)
+    backup = _backup_path(legacy, backup_dir)
+    backup.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(legacy, backup)
 
     kept: list[str] = []
