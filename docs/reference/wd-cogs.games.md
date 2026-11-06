@@ -63,56 +63,6 @@ A cog that plays the hangman game in a discord chat message.
 
 - `@app_commands.command async slash_hangman(interaction: discord.Interaction) -> None` — Start a hangman game.
 
-## `wd_cogs.games.incremental` — `wd-cogs/src/wd_cogs/games/incremental.py`
-Incremental game cog for the Winter Dragon bot.
-
-### `class PlayerManager`
-Manages player-related database operations.
-
-- `ensure_player_exists(user_id: int) -> Players` — Ensure a player exists in the database, creating if necessary.
-
-### `class GeneratorManager`
-Manages generator-related database operations.
-
-- `get_by_name(name: str) -> Generators | None` — Get a generator by name.
-- `create(name: str, description: str, cost_currency: str, cost_amount: int, base_per_second: float) -> Generators` — Create and save a new generator.
-- `update(generator: Generators, cost_currency: str | None=None, cost_amount: int | None=None, base_per_second: float | None=None, description: str | None=None) -> None` — Update generator properties.
-- `get_all() -> list[Generators]` — Get all generators.
-
-### `class CurrencyManager`
-Manages currency-related database operations.
-
-- `get_balance(user_id: int, currency: str) -> int` — Get a user's currency balance.
-- `add_currency(user_id: int, currency: str, amount: int) -> UserMoney` — Add currency to a user.
-
-### `class RateManager`
-Manages generator rate-related database operations.
-
-- `get_or_create_rate(generator_id: int, currency: str, per_second: float) -> GeneratorRates` — Get or create a rate for a generator.
-
-### `class IncrementalGame(Cog, auto_load=True)`
-Cog for managing the incremental game system.
-
-- attributes: admin, currency, rate
-- `@app_commands.command @app_commands.guild_only async buy(interaction: Interaction) -> None` — Open the generator shop menu.
-- `@app_commands.command @app_commands.guild_only async progress(interaction: Interaction) -> None` — View player's game progress.
-- `@admin.command async admin_generator_add(interaction: Interaction, name: str, cost_currency: str, cost_amount: int, base_per_second: float, description: str='A new generator') -> None` — Add a new generator to the game.
-- `@admin.command async admin_generator_update(interaction: Interaction, name: str, cost_currency: str | None=None, cost_amount: int | None=None, base_per_second: float | None=None, description: str | None=None) -> None` — Update an existing generator.
-- `@admin.command async admin_generator_list(interaction: Interaction) -> None` — List all generators in the game.
-- `@currency.command async admin_currency_add(interaction: Interaction, user: discord.User, currency: str, amount: int) -> None` — Add currency to a user.
-- `@rate.command async admin_rate_add(interaction: Interaction, generator_name: str, currency: str, per_second: float) -> None` — Add or update a generation rate for a generator and currency combination.
-
-## `wd_cogs.games.incremental_ui` — `wd-cogs/src/wd_cogs/games/incremental_ui.py`
-UI components for the incremental game.
-
-### `class GeneratorShopMenu(Menu, SessionMixin)`
-Menu for buying generators in the incremental game.
-
-### `class ProgressMenu(Menu, SessionMixin)`
-Menu for viewing player progress in the incremental game.
-
-- `embed() -> discord.Embed` — Build the progress settings embed.
-
 ## `wd_cogs.games.league_of_legends` — `wd-cogs/src/wd_cogs/games/league_of_legends.py`
 Module for League of Legends related Cogs.
 

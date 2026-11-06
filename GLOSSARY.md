@@ -150,14 +150,3 @@ _Avoid_: Match, session
 A member who guessed at least one correct letter in a hangman game. When the game is won, every participant is credited with the win.
 _Avoid_: Player, guesser
 
-**Incremental game**:
-An idle game each member plays once, across every guild, in which generators produce currencies over time. A member can play it in Discord or on the dashboard, and both can do the same things.
-_Avoid_: Clicker, idle game, economy
-
-**Generator**:
-Something a member buys in the incremental game that produces currencies at fixed rates. Only the bot's developers define which generators exist, as part of the game.
-_Avoid_: Building, producer, upgrade
-
-**Currency**:
-A resource in the incremental game that generators produce and members spend. Only the bot's developers define which currencies exist, as part of the game.
-_Avoid_: Money, coins, points

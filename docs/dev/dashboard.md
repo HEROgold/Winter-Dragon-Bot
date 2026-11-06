@@ -31,7 +31,6 @@ A Profile page registers itself with `profile_page` from `src/winter_dragon/web/
 | Feature | Route | Why |
 |---|---|---|
 | Fuel, Hangman, Love, Steam, Urban Dictionary | `/profile/<slug>` | The member's own history |
-| Incremental | `/profile/incremental` | The member's own save, which they play |
 | Teams | `/profile/teams` | The lasting teams the member is on |
 | Reminders | `/profile/reminders` | The member's own reminders, which they manage |
 | All teams | `/teams` | Every lasting team; public |

@@ -62,7 +62,3 @@ A member links their Riot account once (a **linked account**), and League featur
 Tooling around Riot's Clash tournaments.
 
 - **Status:** Port, redesigned later, after Ranked tracking. The Riot Clash API client is already in `wd-cogs`.
-
-## Dropped
-
-- **Incremental game** (`main`).
