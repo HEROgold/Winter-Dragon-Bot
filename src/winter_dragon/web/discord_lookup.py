@@ -11,6 +11,7 @@ lazy from typing import TYPE_CHECKING, Self
 
 lazy from wd_discord import Client, Token, is_network_error
 lazy from wd_discord.log import get_logger
+lazy from wd_discord.snowflake import Snowflake
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.web.references import LookupStatus, Named
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
     from wd_discord import Channel, Guild, Role, User
     from wd_discord.client import NetworkError
-    from wd_discord.snowflake import Snowflake
+    from wd_discord.entities.user import UserGuild
 
 
 CACHE_LIFETIME = timedelta(minutes=5)
@@ -138,6 +139,16 @@ class DiscordLookup:
             return next((role for role in roles if role.id == role_id), None) or _no_such_role()
 
         return await self._fetched("role", role_id, guild_id, fetch)
+
+    async def bot_guild_ids(self) -> frozenset[Snowflake] | None:
+        """Return the IDs of every guild the bot is in, kept like any lookup; ``None`` when Discord couldn't say."""
+        fetched = await self._fetched("bot guilds", Snowflake(0), None, self._bot_guilds)
+        return None if fetched.entity is None else frozenset(guild.id for guild in fetched.entity)
+
+    async def _bot_guilds(self) -> list[UserGuild] | NetworkError:
+        """Fetch every guild the bot is in."""
+        guilds = await self.client.users.guilds()
+        return guilds if is_network_error(guilds) else list(guilds)
 
     async def users(self, ids: Iterable[Snowflake]) -> dict[Snowflake, Named]:
         """Return what Discord says about each of the users ``ids``, asking for them together."""

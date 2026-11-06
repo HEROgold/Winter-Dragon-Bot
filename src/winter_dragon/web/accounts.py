@@ -20,6 +20,12 @@ ACCOUNT_KEY = "account"
 """The session key holding the signed-in :class:`Account`."""
 CSRF_KEY = "csrf"
 """The session key holding the token every state-changing form must send back."""
+SESSION_ID_KEY = "sid"
+"""The session key holding the random ID that the in-memory shared guilds are filed under."""
+NEXT_KEY = "oauth_next"
+"""The session key holding the page a sign-in in progress returns to."""
+SILENT_KEY = "oauth_silent"
+"""The session key marking that a sign-in in progress asked Discord not to show the consent page."""
 STATE_KEY = "oauth_state"
 """The session key holding the OAuth2 ``state`` of a sign-in in progress."""
 CSRF_FIELD = "csrf_token"
@@ -102,6 +108,13 @@ def sign_in(request: Request, account: Account) -> None:
     """Start a fresh session for ``account``, dropping whatever the old one held."""
     request.session.clear()
     request.session[ACCOUNT_KEY] = account.model_dump(mode="json")
+    request.session[SESSION_ID_KEY] = secrets.token_urlsafe(16)
+
+
+def session_id(request: Request) -> str | None:
+    """Return the ID this session's shared guilds are filed under; ``None`` before signing in."""
+    stored = request.session.get(SESSION_ID_KEY)
+    return stored if isinstance(stored, str) else None
 
 
 def sign_out(request: Request) -> None:

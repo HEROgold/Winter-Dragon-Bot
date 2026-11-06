@@ -16,6 +16,7 @@ lazy from winter_dragon.web import auth, bot_status, pages, profile, redirect
 lazy from winter_dragon.web.accounts import SignInRequired
 lazy from winter_dragon.web.records import create_dashboard_tables
 lazy from winter_dragon.web.responses import STATIC_DIR, is_htmx
+lazy from winter_dragon.web.shared_guilds import SharedGuilds
 
 
 if TYPE_CHECKING:
@@ -58,6 +59,7 @@ def create_app(
     app = FastAPI(title="Winter Dragon", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.bind = bind
     app.state.lookup = lookup
+    app.state.shared_guilds = SharedGuilds()
     app.add_middleware(
         SessionMiddleware,
         secret_key=session_secret,

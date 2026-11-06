@@ -8,12 +8,14 @@ Public names only — open the file when you need a body. Index: [API reference]
 ## `winter_dragon.web.accounts` — `src/winter_dragon/web/accounts.py`
 Who is signed in to the dashboard, kept in the signed session cookie, and the CSRF token their forms carry.
 
-- module names: ACCOUNT_KEY, CSRF_KEY, STATE_KEY, CSRF_FIELD, ZONE_COOKIE, SignedIn, BotOwner
+- module names: ACCOUNT_KEY, CSRF_KEY, SESSION_ID_KEY, NEXT_KEY, SILENT_KEY, STATE_KEY, CSRF_FIELD, ZONE_COOKIE,
+  SignedIn, BotOwner
 - `current_account(request: Request) -> Account | None` — Return the account signed in on ``request``, if any.
 - `signed_in(request: Request) -> Account` — Return the signed-in account; the FastAPI dependency of every page that needs one.
 - `is_bot_owner(account: Account | None) -> bool` — Whether ``account`` owns the bot, as :class:`~wd_bot.application.ApplicationOwners` read it at startup.
 - `bot_owner(account: SignedIn) -> Account` — Return the signed-in account when it owns the bot; the FastAPI dependency of the owners' pages.
 - `sign_in(request: Request, account: Account) -> None` — Start a fresh session for ``account``, dropping whatever the old one held.
+- `session_id(request: Request) -> str | None` — Return the ID this session's shared guilds are filed under; ``None`` before signing in.
 - `sign_out(request: Request) -> None` — End the session on ``request``.
 - `csrf_token(request: Request) -> str` — Return the session's CSRF token, creating it on first use.
 - `async checked_csrf(request: Request) -> None` — Refuse a state-changing request whose form doesn't carry the session's CSRF token; a FastAPI dependency.
@@ -39,8 +41,8 @@ The dashboard's FastAPI app: its pages, the session cookie they share, and where
 ## `winter_dragon.web.auth` — `src/winter_dragon/web/auth.py`
 Signing in with Discord and out again; the callback sets the HttpOnly session cookie, never a token.
 
-- module names: router, LOGIN_PATH
-- `@router.get login(request: Request) -> Response` — Send the visitor to Discord to sign in, remembering the ``state`` the callback must bring back.
+- module names: router, LOGIN_PATH, RETRY_ERRORS
+- `@router.get login(request: Request, next: str | None=None) -> Response` — Send the visitor to Discord to sign in, then back to ``next`` when that is a page of this site.
 - `@router.get async callback(request: Request, code: str | None=None, state: str | None=None, error: str | None=None) -> Response` — Finish signing in with the ``code`` Discord sent back, if its ``state`` is the one this session asked for.
 - `@router.post logout(request: Request) -> Response` — Sign out, and go back to the landing page.
 
@@ -79,15 +81,21 @@ The bot's REST client, and the names it has fetched; open it with ``async with``
 - `async channel(channel_id: Snowflake) -> Fetched[Channel]` — Fetch a channel.
 - `async guild(guild_id: Snowflake) -> Fetched[Guild]` — Fetch a guild, with its member counts.
 - `async role(guild_id: Snowflake, role_id: Snowflake) -> Fetched[Role]` — Fetch a role of a guild.
+- `async bot_guild_ids() -> frozenset[Snowflake] | None` — Return the IDs of every guild the bot is in, kept like any lookup; ``None`` when Discord couldn't say.
 - `async users(ids: Iterable[Snowflake]) -> dict[Snowflake, Named]` — Return what Discord says about each of the users ``ids``, asking for them together.
 
 ## `winter_dragon.web.discord_oauth` — `src/winter_dragon/web/discord_oauth.py`
 Signing in with Discord: the OAuth2 authorization code grant, used only to learn who is signing in.
 
-- module names: CALLBACK_PATH, logger
+- module names: CALLBACK_PATH, SCOPES, logger
 - `redirect_uri() -> URL` — Return the callback URL Discord redirects to, under :attr:`DashboardSettings.public_url`.
-- `authorization_url(state: str) -> URL` — Return the Discord page asking the user to sign in, which sends ``state`` back to the callback.
-- `async signed_in_user(code: str) -> User | None` — Return the Discord user who authorized the dashboard with ``code``; ``None`` when Discord refused it.
+- `authorization_url(state: str, *, silent: bool=True) -> URL` — Return the Discord page asking the user to sign in, which sends ``state`` back to the callback.
+- `async signed_in_user(code: str) -> Granted | None` — Return the Discord user who authorized the dashboard with ``code``, and their guilds; ``None`` when Discord refused it.
+
+### `@dataclass class Granted`
+What signing in learned: the member, and every guild they are in (empty if Discord wouldn't say).
+
+- fields: user: User, guild_ids: frozenset[Snowflake]
 
 ## `winter_dragon.web.formatting` — `src/winter_dragon/web/formatting.py`
 How the dashboard writes stored values for people: times in their zone, intervals and table names in words.
@@ -370,3 +378,16 @@ Where the dashboard is served, and how it signs people in with Discord.
 
 - attributes: host, port, public_url, client_secret, session_secret, session_days
 - `@classmethod https_only() -> bool` — Whether the dashboard is served over HTTPS, so its session cookie is only ever sent over it.
+
+## `winter_dragon.web.shared_guilds` — `src/winter_dragon/web/shared_guilds.py`
+The guilds each signed-in session shares with the bot, kept in memory for a while (ADR 0006).
+
+- module names: SHARED_GUILDS_LIFETIME, RETURN_PREFIXES
+- `safe_return_path(path: str | None) -> str | None` — Return ``path`` when it is a page of this site that signing in may return to, else ``None``.
+
+### `class SharedGuilds`
+Which guilds the bot and each session's member are both in, and when each session's were read.
+
+- `remember(session_id: str, guild_ids: frozenset[Snowflake]) -> None` — Keep ``guild_ids`` as the guilds the session's member shares with the bot, read just now.
+- `current(session_id: str | None) -> frozenset[Snowflake] | None` — Return the session's shared guilds; ``None`` when there are none yet or they have gone stale.
+- `forget(session_id: str | None) -> None` — Drop the session's guilds, when it ends.
