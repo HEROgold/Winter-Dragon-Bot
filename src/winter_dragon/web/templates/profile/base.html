@@ -6,7 +6,7 @@
 {% block subnav %}
 <nav class="subnav" aria-label="Profile pages">
   {% for tab in pages %}
-    <a href="{{ tab.path }}"{% if page and tab.slug == page.slug %} aria-current="page"{% endif %}{% if tab.slug in unused %} class="is-unused" title="Nothing here yet"{% endif %}>{{ tab.title }}{% if tab.slug in unused %}<span class="visually-hidden"> (nothing here yet)</span>{% endif %}</a>
+    <a href="{{ tab.path }}"{% if page and tab.slug == page.slug %} aria-current="page"{% endif %}{% if tab.slug in unused %} class="is-unused"{% endif %}>{{ tab.title }}</a>
   {% endfor %}
 </nav>
 {% endblock %}
