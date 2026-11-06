@@ -468,7 +468,7 @@ OAuth2: scopes, and the authorization code grant's exchange and revoke (https://
 ### `class OAuthScopes(StrEnum)`
 OAuth2 Scopes for the User Object.
 
-- attributes: IDENTIFY, EMAIL, PREMIUM
+- attributes: IDENTIFY, EMAIL, GUILDS, PREMIUM
 
 ### `class AccessToken(DiscordModel)`
 The token response of the code grant (https://docs.discord.com/developers/topics/oauth2#authorization-code-grant-access-token-response).

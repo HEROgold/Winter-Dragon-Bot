@@ -1,5 +1,6 @@
 """The dashboard's FastAPI app: its pages, the session cookie they share, and where a page that needs sign-in sends you."""
 
+lazy from contextlib import asynccontextmanager
 lazy from datetime import timedelta
 lazy from typing import TYPE_CHECKING
 
@@ -11,15 +12,20 @@ lazy from starlette.responses import Response
 
 lazy from winter_dragon.cogs import import_cogs
 lazy from winter_dragon.metrics import observe_requests
-lazy from winter_dragon.web import auth, bot_status, pages, profile, redirect
+lazy from winter_dragon.web import auth, bot_status, cards, pages, profile, redirect
 lazy from winter_dragon.web.accounts import SignInRequired
 lazy from winter_dragon.web.records import create_dashboard_tables
 lazy from winter_dragon.web.responses import STATIC_DIR, is_htmx
+lazy from winter_dragon.web.shared_guilds import SharedGuilds
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from sqlalchemy import Engine
     from starlette.requests import Request
+
+    from winter_dragon.web.discord_lookup import DiscordLookup
 
 
 SESSION_COOKIE = "wd_session"
@@ -31,15 +37,29 @@ def create_app(
     session_secret: str,
     session_lifetime: timedelta = timedelta(days=14),
     https_only: bool = False,
+    lookup: DiscordLookup | None = None,
 ) -> FastAPI:
     """Return the dashboard on the database ``bind``, its session cookie signed with ``session_secret``.
+
+    ``lookup`` names the Discord IDs its pages show and is opened while the app runs; without one they show as plain IDs.
 
     Imports every cog first, so the data page knows each table the bot stores, and creates the tables it writes to.
     """
     import_cogs()
     create_dashboard_tables(bind)
-    app = FastAPI(title="Winter Dragon", docs_url=None, redoc_url=None, openapi_url=None)
+
+    @asynccontextmanager
+    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+        if lookup is None:
+            yield
+            return
+        async with lookup:
+            yield
+
+    app = FastAPI(title="Winter Dragon", docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.state.bind = bind
+    app.state.lookup = lookup
+    app.state.shared_guilds = SharedGuilds()
     app.add_middleware(
         SessionMiddleware,
         secret_key=session_secret,
@@ -50,7 +70,7 @@ def create_app(
     )
     observe_requests(app)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    for router in (pages.router, auth.router, profile.router, bot_status.router, redirect.router):
+    for router in (pages.router, auth.router, profile.router, cards.router, bot_status.router, redirect.router):
         app.include_router(router)
     for page in profile.profile_pages():
         if page.router is not None:

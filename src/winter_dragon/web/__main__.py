@@ -20,6 +20,7 @@ from winter_dragon.web.settings import DashboardSettings
 lazy from winter_dragon.cogs import import_cogs
 lazy from winter_dragon.metrics import Exporter
 lazy from winter_dragon.web.app import create_app
+lazy from winter_dragon.web.discord_lookup import DiscordLookup
 
 
 async def _load_application() -> None:
@@ -47,6 +48,7 @@ def main() -> None:
         session_secret=DashboardSettings.session_secret,
         session_lifetime=timedelta(days=DashboardSettings.session_days),
         https_only=DashboardSettings.https_only(),
+        lookup=DiscordLookup(Tokens.discord_token),
     )
     uvicorn.run(app, host=DashboardSettings.host, port=DashboardSettings.port, proxy_headers=True)
 

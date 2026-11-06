@@ -1,5 +1,6 @@
 {% extends "profile/base.html" %}
 {% from "_components.html" import table %}
+{% from "_references.html" import reference %}
 
 {% block profile %}
   <p>Teams formed: {{ formed }}.</p>
@@ -10,8 +11,8 @@
       {% for row in teams %}
         <tr>
           <td>{{ row.name }}</td>
-          <td>{{ row.captain_id or '—' }}</td>
-          <td>{{ row.member_ids | join(", ") }}</td>
+          <td>{% if row.captain %}{{ reference(row.captain) }}{% else %}—{% endif %}</td>
+          <td>{% for member in row.members %}{{ reference(member) }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
           <td>
             {% if row.entries %}
               <ul>

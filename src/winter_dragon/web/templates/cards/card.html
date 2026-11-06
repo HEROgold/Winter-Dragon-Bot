@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "_references.html" import reference %}
+
+{% block title %}{{ card.title }} · {% endblock %}
+
+{% block main %}
+<main class="page">
+  <h1 class="page-title">
+    {% if card.image_url %}<img class="avatar" src="{{ card.image_url }}" alt="">{% endif %}
+    {{ card.title }}
+  </h1>
+  <p class="page-lead">{{ card.kind | capitalize }}</p>
+
+  {% if card.facts %}
+    <dl>
+      {% for fact in card.facts %}
+        <dt>{{ fact.label }}</dt>
+        <dd>{{ fact.value }}</dd>
+      {% endfor %}
+    </dl>
+  {% endif %}
+
+  {% for label, related in card.related %}
+    <p>{{ label }}: {{ reference(related) }}</p>
+  {% endfor %}
+
+  {% if card.teams %}
+    <h2>Teams you share</h2>
+    <ul>
+      {% for team in card.teams %}
+        <li>{{ team }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</main>
+{% endblock %}

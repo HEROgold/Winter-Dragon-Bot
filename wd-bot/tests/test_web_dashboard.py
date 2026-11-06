@@ -42,6 +42,7 @@ from winter_dragon.cogs.tournament.models import TeamMode, Tournament, Tournamen
 from winter_dragon.cogs.urban import Lookup
 from winter_dragon.web import auth, bot_status, pages, profile
 from winter_dragon.web.app import create_app
+from winter_dragon.web.discord_oauth import Granted
 from winter_dragon.web.formatting import plural, span
 from winter_dragon.web.profile_pages import incremental as incremental_page
 from winter_dragon.web.profile_pages import reminders
@@ -84,8 +85,8 @@ def client(bind: Engine, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 def _sign_in(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def granted(code: str) -> User | None:
-        return USER if code == "granted" else None
+    async def granted(code: str) -> Granted | None:
+        return Granted(USER, frozenset()) if code == "granted" else None
 
     monkeypatch.setattr(auth, "signed_in_user", granted)
     login = client.get("/auth/discord/login", follow_redirects=False)
@@ -163,7 +164,7 @@ def test_a_page_that_needs_sign_in_sends_you_to_sign_in(client: TestClient) -> N
 
 
 def test_signing_in_needs_the_state_it_was_sent_with(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def never(_code: str) -> User | None:
+    async def never(_code: str) -> Granted | None:
         pytest.fail("a forged callback must not reach Discord")
 
     monkeypatch.setattr(auth, "signed_in_user", never)

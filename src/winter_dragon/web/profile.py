@@ -17,7 +17,7 @@ A page that has nothing to show until the member uses the feature passes ``used`
 something for the member. The tab bar puts pages without anything after the others and dims them.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 lazy from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, Depends
@@ -29,7 +29,8 @@ lazy from wd_db.extension.lifecycle import owned_by
 lazy from wd_discord.log import get_logger
 
 lazy from winter_dragon.web.accounts import Account, current_account, signed_in, visitor_zone
-lazy from winter_dragon.web.responses import database, render, render_mapping, see_other
+lazy from winter_dragon.web.references import References
+lazy from winter_dragon.web.responses import database, render_mapping, see_other
 
 
 if TYPE_CHECKING:
@@ -59,6 +60,8 @@ class ProfileContext:
     member_id: Snowflake
     """The Discord user ID of the signed-in member; a page shows only their records."""
     zone: ZoneInfo
+    references: References = field(default_factory=References)
+    """Turns a Discord ID into a link to its card; a page puts these in its context and never prints the ID."""
 
 
 @dataclass(frozen=True)
@@ -185,7 +188,10 @@ def profile_page_view(
 ) -> Response:
     """Show the signed-in member's page ``slug`` of the Profile."""
     page = _page(slug)
-    context = page.context(ProfileContext(bind=bind, member_id=account.id, zone=visitor_zone(request)))
+    references = References(request.app.state.lookup)
+    context = page.context(
+        ProfileContext(bind=bind, member_id=account.id, zone=visitor_zone(request), references=references),
+    )
     response = render_profile_page(request, slug, context)
     response.set_cookie(
         LAST_TAB_COOKIE,
