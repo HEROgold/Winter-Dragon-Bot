@@ -74,7 +74,9 @@ async def callback(
     sign_in(request, Account.from_user(granted.user))
     lookup = request.app.state.lookup
     session = session_id(request)
-    if lookup is not None and session is not None and (bot_guilds := await lookup.bot_guild_ids()) is not None:
+    if lookup is not None and session is not None:
+        # When Discord can't list the bot's guilds, no card opens until the guilds are read again.
+        bot_guilds = await lookup.bot_guild_ids() or frozenset()
         request.app.state.shared_guilds.remember(session, granted.guild_ids & bot_guilds)
     return see_other(return_to)
 

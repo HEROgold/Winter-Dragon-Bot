@@ -21,7 +21,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable, Iterable
     from types import TracebackType
 
-    from wd_discord import Channel, Guild, Role, User
+    from wd_discord import Channel, Guild, Member, Role, User
     from wd_discord.client import NetworkError
     from wd_discord.entities.user import UserGuild
 
@@ -129,16 +129,27 @@ class DiscordLookup:
         guild = self.client.guilds.partial(guild_id)
         return await self._fetched("guild", guild_id, None, lambda: guild.fetch(with_counts=True))
 
-    async def role(self, guild_id: Snowflake, role_id: Snowflake) -> Fetched[Role]:
-        """Fetch a role of a guild."""
+    async def roles(self, guild_id: Snowflake) -> Fetched[list[Role]]:
+        """Fetch every role of a guild."""
 
-        async def fetch() -> Role | NetworkError:
+        async def fetch() -> list[Role] | NetworkError:
             roles = await self.client.guilds.partial(guild_id).fetch_roles()
-            if is_network_error(roles):
-                return roles
-            return next((role for role in roles if role.id == role_id), None) or _no_such_role()
+            return roles if is_network_error(roles) else list(roles)
 
-        return await self._fetched("role", role_id, guild_id, fetch)
+        return await self._fetched("roles", guild_id, None, fetch)
+
+    async def role(self, guild_id: Snowflake, role_id: Snowflake) -> Fetched[Role]:
+        """Fetch a role of a guild; unknown when the guild has no such role."""
+        roles = await self.roles(guild_id)
+        if roles.entity is None:
+            return Fetched(roles.status)
+        found = next((role for role in roles.entity if role.id == role_id), None)
+        return Fetched(LookupStatus.UNKNOWN) if found is None else Fetched(LookupStatus.FOUND, found)
+
+    async def member(self, guild_id: Snowflake, user_id: Snowflake) -> Fetched[Member]:
+        """Fetch a user's membership of a guild; unknown when they aren't in it."""
+        partial = self.client.guilds.partial(guild_id).member(user_id)
+        return await self._fetched("member", user_id, guild_id, partial.fetch)
 
     async def bot_guild_ids(self) -> frozenset[Snowflake] | None:
         """Return the IDs of every guild the bot is in, kept like any lookup; ``None`` when Discord couldn't say."""
@@ -178,10 +189,3 @@ class DiscordLookup:
         if outcome.status is not LookupStatus.UNAVAILABLE:
             self._kept[key] = (now + self._lifetime, outcome)
         return outcome
-
-
-def _no_such_role() -> NetworkError:
-    """Return the failure for a role that its guild doesn't have."""
-    from wd_discord.errors.api import ApiResponseError  # noqa: PLC0415
-
-    return ApiResponseError(code=10011, message="Unknown Role", status=404)

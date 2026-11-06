@@ -58,6 +58,42 @@ The latest snapshot, and whether it's too old to trust.
 - fields: stats: BotStats | None, age: timedelta | None, stale: bool
 - `@classmethod at(stats: BotStats | None, now: datetime, interval: float) -> StatsView` — Return the view of ``stats`` at ``now``, stale past :data:`STALE_INTERVALS` times ``interval`` seconds.
 
+## `winter_dragon.web.card_access` — `src/winter_dragon/web/card_access.py`
+Who may open a channel's card: a member who could see that channel in Discord.
+
+- `can_view_channel(who: GuildMember, overwrites: Collection[PermissionOverwrite]) -> bool` — Return whether the member holds View Channel in a channel with these ``overwrites``, the way Discord works it out.
+
+### `@dataclass class GuildMember`
+A member as a guild's permissions see them.
+
+- fields: guild_id: Snowflake, owner_id: Snowflake, member_id: Snowflake, member_roles: Collection[Snowflake],
+  role_permissions: Mapping[Snowflake, Permissions]
+
+## `winter_dragon.web.cards` — `src/winter_dragon/web/cards.py`
+Cards: one dashboard page per Discord user, channel, role or guild, linked to from reference links.
+
+- module names: router, LOGIN_PATH, NO_SUCH_CARD
+- `@router.get async user_card(request: Request, user_id: int, account: SignedIn, bind: Database) -> Response` — Show a user: to themselves, to someone on a lasting team with them, and to anyone who shares a guild with them.
+- `@router.get async guild_card(request: Request, guild_id: int) -> Response` — Show a guild the viewer shares with the bot.
+- `@router.get async role_card(request: Request, guild_id: int, role_id: int) -> Response` — Show a role of a guild the viewer shares with the bot.
+- `@router.get async channel_card(request: Request, channel_id: int, account: SignedIn) -> Response` — Show a channel of a guild the viewer shares with the bot, if the viewer could see it in Discord.
+
+### `@dataclass class CardFact`
+One labelled line of a card.
+
+- fields: label: str, value: str
+
+### `@dataclass class Card`
+What a card page shows: what the entity is called, its picture, facts, related cards and shared teams.
+
+- fields: kind: ReferenceKind, title: str, image_url: str | None, facts: tuple[CardFact, ...], related: tuple[tuple[str,
+  ReferenceLink], ...], teams: tuple[str, ...]
+
+### `@dataclass class Opened`
+What a card request starts from: the name lookup, and the guilds the viewer shares with the bot.
+
+- fields: lookup: DiscordLookup, guilds: frozenset[Snowflake]
+
 ## `winter_dragon.web.discord_lookup` — `src/winter_dragon/web/discord_lookup.py`
 Asking Discord what a user, channel, role or guild is called, through a REST-only bot client with a short cache.
 
@@ -80,7 +116,9 @@ The bot's REST client, and the names it has fetched; open it with ``async with``
 - `async user(user_id: Snowflake) -> Fetched[User]` — Fetch a user.
 - `async channel(channel_id: Snowflake) -> Fetched[Channel]` — Fetch a channel.
 - `async guild(guild_id: Snowflake) -> Fetched[Guild]` — Fetch a guild, with its member counts.
-- `async role(guild_id: Snowflake, role_id: Snowflake) -> Fetched[Role]` — Fetch a role of a guild.
+- `async roles(guild_id: Snowflake) -> Fetched[list[Role]]` — Fetch every role of a guild.
+- `async role(guild_id: Snowflake, role_id: Snowflake) -> Fetched[Role]` — Fetch a role of a guild; unknown when the guild has no such role.
+- `async member(guild_id: Snowflake, user_id: Snowflake) -> Fetched[Member]` — Fetch a user's membership of a guild; unknown when they aren't in it.
 - `async bot_guild_ids() -> frozenset[Snowflake] | None` — Return the IDs of every guild the bot is in, kept like any lookup; ``None`` when Discord couldn't say.
 - `async users(ids: Iterable[Snowflake]) -> dict[Snowflake, Named]` — Return what Discord says about each of the users ``ids``, asking for them together.
 

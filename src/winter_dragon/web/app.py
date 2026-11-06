@@ -12,7 +12,7 @@ lazy from starlette.responses import Response
 
 lazy from winter_dragon.cogs import import_cogs
 lazy from winter_dragon.metrics import observe_requests
-lazy from winter_dragon.web import auth, bot_status, pages, profile, redirect
+lazy from winter_dragon.web import auth, bot_status, cards, pages, profile, redirect
 lazy from winter_dragon.web.accounts import SignInRequired
 lazy from winter_dragon.web.records import create_dashboard_tables
 lazy from winter_dragon.web.responses import STATIC_DIR, is_htmx
@@ -70,7 +70,7 @@ def create_app(
     )
     observe_requests(app)
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    for router in (pages.router, auth.router, profile.router, bot_status.router, redirect.router):
+    for router in (pages.router, auth.router, profile.router, cards.router, bot_status.router, redirect.router):
         app.include_router(router)
     for page in profile.profile_pages():
         if page.router is not None:
