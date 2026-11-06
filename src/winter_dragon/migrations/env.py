@@ -4,6 +4,7 @@ from alembic import context
 from sqlmodel import SQLModel
 
 import archive.models  # noqa: F401 - registers the archive's tables
+import winter_dragon.bot_stats  # noqa: F401 - registers the snapshot table, which its cog imports lazily
 from winter_dragon.cogs import import_cogs
 from winter_dragon.migrations import include_object, render_item
 
