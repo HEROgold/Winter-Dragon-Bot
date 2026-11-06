@@ -8,6 +8,7 @@ old file, so they need no entry.
 """
 
 lazy import re
+lazy from pathlib import Path
 
 lazy from wd_config.constants import (
     APP_CONFIG_FILE,
@@ -106,13 +107,17 @@ MOVES = (
 """Every legacy section that still has a home; a section not named here is dropped."""
 
 
+BACKUP_DIR = Path("logs")
+"""Where the backup of the old ``config.ini`` goes: ``logs/`` is writable in the read-only deploy container."""
+
+
 def migrate_legacy_config() -> MigrationReport | None:
     """Move the old single ``config.ini`` into the per-scope files, logging what moved and what was dropped.
 
     Run it before any settings class is imported. ``None`` when ``config.ini`` was already migrated.
     """
     logger = get_logger(__name__)
-    report = migrate(APP_CONFIG_FILE, MOVES)
+    report = migrate(APP_CONFIG_FILE, MOVES, backup_dir=BACKUP_DIR)
     if report is None:
         return None
     logger.warning(t"Migrated the old {APP_CONFIG_FILE} into per-scope files; the original is in {report.backup}")
