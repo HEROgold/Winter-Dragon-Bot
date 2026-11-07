@@ -85,27 +85,30 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
     async def scrape_and_recheck(self) -> float:
         """Scrape when due, re-check sales that just ended, and return the seconds until either is due next.
 
-        Scrapes on load, then on :func:`next_scrape_time`.
+        Scrapes on load, then on :func:`next_scrape_time`. Everything it changes is committed once, at the end.
         """
-        if self._next_scrape is None or utc_now() >= self._next_scrape:
-            await self._guarded(self.scrape(utc_now()))
-            self._next_scrape = next_scrape_time(utc_now(), timedelta(seconds=SteamSettings.update_interval))
-            self.logger.info(t"Next Steam scrape at {self._next_scrape:%Y-%m-%d %H:%M} UTC")
-        await self._guarded(self.recheck_due(utc_now()))
         with Session(self.bind) as session:
-            next_recheck = SteamSaleStore(session).next_recheck(delay=self._recheck_delay)
+            store = SteamSaleStore(session)
+            if self._next_scrape is None or utc_now() >= self._next_scrape:
+                await self._guarded(store, self.scrape(store, utc_now()))
+                self._next_scrape = next_scrape_time(utc_now(), timedelta(seconds=SteamSettings.update_interval))
+                self.logger.info(t"Next Steam scrape at {self._next_scrape:%Y-%m-%d %H:%M} UTC")
+            await self._guarded(store, self.recheck_due(store, utc_now()))
+            next_recheck = store.next_recheck(delay=self._recheck_delay)
+            session.commit()
         wake = self._next_scrape if next_recheck is None else min(self._next_scrape, next_recheck)
         return max(SteamSettings.min_sleep, (wake - utc_now()).total_seconds())
 
-    async def _guarded(self, work: Coroutine[object, object, None]) -> None:
-        """Run ``work``, logging instead of raising, so a failed scrape doesn't skip the re-check after it."""
+    async def _guarded(self, store: SteamSaleStore, work: Coroutine[object, object, None]) -> None:
+        """Run ``work``, logging and rolling back its changes instead of raising, so a failure doesn't skip what follows."""
         try:
             await work
         except Exception:
+            store.session.rollback()
             self.logger.exception(t"Steam background work failed")
 
-    async def scrape(self, now: datetime) -> None:
-        """Ask Steam for its sales, store them, and DM subscribers new ones.
+    async def scrape(self, store: SteamSaleStore, now: datetime) -> None:
+        """Ask Steam for its sales, store them, and DM subscribers new ones; the caller commits.
 
         Stores every sale from :attr:`SteamSettings.complete_percent` up, and the
         :attr:`SteamSettings.top_sellers` best-selling ones below it, down to :attr:`SteamSettings.stored_percent`
@@ -113,54 +116,55 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         scrape didn't list (ended, or no longer among the top sellers) are checked again, unless their end is
         known: those are re-checked when they end, by :meth:`recheck_due`.
         """
-        with Session(self.bind) as session:
-            store = SteamSaleStore(session)
-            lowest = store.lowest_threshold()
-            percent = SteamSettings.stored_percent if lowest is None else min(SteamSettings.stored_percent, lowest)
-            seen: set[int] = set()
-            sent_before = self.throttle.sent
-            async with SteamScraper(throttle=self.throttle) as scraper:
-                for query_percent, limit in sale_queries(percent, SteamSettings.complete_percent, SteamSettings.top_sellers):
-                    async for scraped in scraper.query_sales(query_percent, limit):
-                        if scraped.id not in seen:
-                            seen.add(scraped.id)
-                            store.record(scraped, now=now, outdated_after=self._outdated_after)
-                if seen:  # finding nothing means Steam failed, not that every sale ended
-                    unseen = store.unseen_without_end(now, percent, outdated_after=self._outdated_after)
-                    await self._recheck(scraper, store, unseen, now)
-            notified = await SteamSaleNotifier(self.bot.client, store, color=SteamSettings.embed_color).notify(
-                now=now,
-                content=self._notification_content(),
-            )
-            requests = self.throttle.sent - sent_before
-            self.logger.info(
-                t"Steam scrape done (threshold {percent} percent, {len(seen)} sales, {requests} requests), "
-                t"notified {notified} subscriber(s)",
-            )
+        lowest = store.lowest_threshold()
+        percent = SteamSettings.stored_percent if lowest is None else min(SteamSettings.stored_percent, lowest)
+        listed: dict[int, ScrapedSale] = {}
+        sent_before = self.throttle.sent
+        async with SteamScraper(throttle=self.throttle) as scraper:
+            for query_percent, limit in sale_queries(percent, SteamSettings.complete_percent, SteamSettings.top_sellers):
+                async for scraped in scraper.query_sales(query_percent, limit):
+                    listed.setdefault(scraped.id, scraped)
+            store.record_many(listed.values(), now=now, outdated_after=self._outdated_after)
+            if listed:  # finding nothing means Steam failed, not that every sale ended
+                unseen = store.unseen_without_end(now, percent, outdated_after=self._outdated_after)
+                await self._recheck(scraper, store, unseen, now)
+        notified = await SteamSaleNotifier(self.bot.client, store, color=SteamSettings.embed_color).notify(
+            now=now,
+            content=self._notification_content(),
+        )
+        requests = self.throttle.sent - sent_before
+        self.logger.info(
+            t"Steam scrape done (threshold {percent} percent, {len(listed)} sales, {requests} requests), "
+            t"notified {notified} subscriber(s)",
+        )
 
-    async def recheck_due(self, now: datetime) -> None:
-        """Check the sales whose announced end has passed: update those still running, remove those that ended."""
-        with Session(self.bind) as session:
-            store = SteamSaleStore(session)
-            due = store.due_rechecks(now=now, delay=self._recheck_delay)
-            if not due or self.throttle.paused:
-                return
-            async with SteamScraper(throttle=self.throttle) as scraper:
-                await self._recheck(scraper, store, due, now)
+    async def recheck_due(self, store: SteamSaleStore, now: datetime) -> None:
+        """Check the sales whose announced end has passed: update those still running, remove those that ended.
+
+        The caller commits.
+        """
+        due = store.due_rechecks(now=now, delay=self._recheck_delay)
+        if not due or self.throttle.paused:
+            return
+        async with SteamScraper(throttle=self.throttle) as scraper:
+            await self._recheck(scraper, store, due, now)
 
     async def _recheck(self, scraper: SteamScraper, store: SteamSaleStore, sales: Iterable[SteamSale], now: datetime) -> None:
         """Check ``sales`` on Steam: update those still running, remove those that ended, retry later on failure."""
         by_item = {item: sale for sale in sales if (item := sale.steam_url.store_item) is not None}
+        stored = store.property_rows(sale.id for sale in by_item.values())
         async for item, details in scraper.get_sales(by_item):
             sale = by_item[item]
+            if sale.id is None:
+                continue
             match details:
                 case ScrapeFailure():
                     self.logger.warning(t"Could not re-check {sale.url}; trying again later")
                 case ScrapedSale():
-                    store.refresh(sale, details, now=now)
+                    store.refresh(sale, details, now=now, stored=stored[sale.id])
                 case None:
                     self.logger.info(t"Steam sale ended: {sale.title}")
-                    store.remove(sale)
+                    store.remove(sale, stored[sale.id])
 
     def _notification_content(self) -> str:
         """Return the text above a sale DM, pointing at the commands to stop notifications and see every sale."""

@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import pytest
+from sqlalchemy import event
 from sqlmodel import Session
 from wd_db.extension.lifecycle import alive
 
@@ -14,7 +15,7 @@ from winter_dragon.cogs.steam.urls import SteamURL
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     from sqlalchemy import Engine
 
@@ -119,25 +120,25 @@ def test_no_recheck_without_known_ends(store: SteamSaleStore) -> None:
 
 def test_refresh_drops_an_end_that_already_passed(store: SteamSaleStore) -> None:
     sale, _ = store.record(scraped(sale_end=NOW), now=NOW, outdated_after=OUTDATED)
-    store.refresh(sale, scraped(percent=80, sale_end=NOW), now=NOW + DELAY)
+    store.refresh(sale, scraped(percent=80, sale_end=NOW), now=NOW + DELAY, stored={})
     assert sale.sale_end is None
     assert sale.sale_percent == 80
 
     future = NOW + timedelta(days=1)
-    store.refresh(sale, scraped(sale_end=future), now=NOW + DELAY)
+    store.refresh(sale, scraped(sale_end=future), now=NOW + DELAY, stored={})
     assert sale.sale_end == future
 
 
 def test_remove_deletes_the_sale_and_its_properties(store: SteamSaleStore) -> None:
     sale, _ = store.record(scraped(properties=frozenset({SaleTypes.DLC})), now=NOW, outdated_after=OUTDATED)
-    store.remove(sale)
+    store.remove(sale, store.property_rows([sale.id])[sale.id])
     assert store.session.exec(alive(SteamSale)).all() == []
     assert store.session.exec(alive(SteamSaleProperties)).all() == []
 
 
 def test_a_removed_sale_found_again_is_stored_alive_and_new(store: SteamSaleStore) -> None:
     sale, _ = store.record(scraped(properties=frozenset({SaleTypes.DLC})), now=NOW, outdated_after=OUTDATED)
-    store.remove(sale)
+    store.remove(sale, store.property_rows([sale.id])[sale.id])
     later = NOW + timedelta(hours=1)
 
     sale, is_new = store.record(scraped(percent=90), now=later, outdated_after=OUTDATED)
@@ -180,3 +181,38 @@ def test_unseen_without_end_skips_sales_with_a_known_end(store: SteamSaleStore) 
     unseen = store.unseen_without_end(NOW, 0, outdated_after=OUTDATED)
 
     assert [sale.id for sale in unseen] == [1]
+
+
+def _statements(store: SteamSaleStore, work: Callable[[], object]) -> int:
+    """Count the SQL statements, inserts aside, ``work`` sends through ``store``'s session."""
+    count = 0
+
+    def counted(*args: object) -> None:
+        nonlocal count
+        if not str(args[2]).startswith("INSERT"):  # one row each on sqlite; Postgres batches them
+            count += 1
+
+    bind = store.session.get_bind()
+    event.listen(bind, "before_cursor_execute", counted)
+    try:
+        work()
+    finally:
+        event.remove(bind, "before_cursor_execute", counted)
+    return count
+
+
+def test_recording_and_rechecking_take_the_same_queries_for_any_number_of_sales(store: SteamSaleStore) -> None:
+    def run(first: int, size: int) -> int:
+        batch = [scraped(first + offset, properties=frozenset({SaleTypes.DLC})) for offset in range(size)]
+
+        def work() -> None:
+            sales = [sale for sale, _ in store.record_many(batch, now=NOW, outdated_after=OUTDATED)]
+            stored = store.property_rows(sale.id for sale in sales)
+            for sale, details in zip(sales, batch, strict=True):
+                store.refresh(sale, details, now=NOW, stored=stored[sale.id])
+            store.session.commit()
+
+        return _statements(store, work)
+
+    store.record_many([scraped(1000)], now=NOW, outdated_after=OUTDATED)  # known sales don't change the count
+    assert run(1, 2) == run(100, 20)
