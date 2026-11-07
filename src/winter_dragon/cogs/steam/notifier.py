@@ -32,17 +32,28 @@ class SteamSaleNotifier(LoggerMixin):
     async def notify(self, *, now: datetime, content: str) -> int:
         """DM every subscriber with new sales, with ``content`` above the embed; return how many were notified.
 
-        Each delivered DM logs one :class:`SaleNotification` per sale.
+        Each delivered DM logs one :class:`SaleNotification` per sale. The caller commits, so a failed commit
+        sends the same DMs again on the next run.
 
         A subscriber whose DM fails (e.g. DMs closed) keeps their ``last_notification``, so they get the sales on
         a later run instead of losing them.
         """
         notified = 0
-        for user in self.store.subscribers():
-            sales = self.store.new_since(user.last_notification, user.sale_threshold)
+        users = self.store.subscribers()
+        if not users:
+            return notified
+        # one query for everything any subscriber could be owed, then each subscriber's share is filtered from it
+        recent = self.store.new_since(min(user.last_notification for user in users), 0)
+        properties = self.store.properties(recent)
+        for user in users:
+            sales = [
+                sale
+                for sale in recent
+                if sale.discovered_at > user.last_notification and sale.sale_percent >= user.sale_threshold
+            ]
             if not sales:
                 continue
-            embed = build_notification(sales, self.store.properties(sales), color=self.color)
+            embed = build_notification(sales, properties, color=self.color)
             if await self._send(user, content, embed):
                 self.store.session.add_all(
                     SaleNotification(
@@ -58,7 +69,6 @@ class SteamSaleNotifier(LoggerMixin):
                 )
                 user.last_notification = now
                 self.store.session.add(user)
-                self.store.session.commit()
                 notified += 1
         return notified
 

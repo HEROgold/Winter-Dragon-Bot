@@ -604,8 +604,8 @@ Lists Steam sales on request and DMs subscribers new ones, re-checking sales rig
 - `@property throttle -> RequestThrottle` — The request throttle every scraper of this cog shares, so spacing and rate-limit pauses span them all.
 - `async load() -> None` — Create the Steam tables if missing; the bot then starts :meth:`scrape_and_recheck`.
 - `@Cog.periodic async scrape_and_recheck() -> float` — Scrape when due, re-check sales that just ended, and return the seconds until either is due next.
-- `async scrape(now: datetime) -> None` — Ask Steam for its sales, store them, and DM subscribers new ones.
-- `async recheck_due(now: datetime) -> None` — Check the sales whose announced end has passed: update those still running, remove those that ended.
+- `async scrape(store: SteamSaleStore, now: datetime) -> None` — Ask Steam for its sales, store them, and DM subscribers new ones; the caller commits.
+- `async recheck_due(store: SteamSaleStore, now: datetime) -> None` — Check the sales whose announced end has passed: update those still running, remove those that ended.
 - `@Cog.command async add(interaction: CommandInteraction) -> None` — Subscribe the invoking user to Steam sale DMs.
 - `@Cog.command async percentage(interaction: CommandInteraction, percent: int) -> None` — Set the minimum discount the invoking user is notified about, subscribing them when they aren't.
 - `@Cog.command async remove(interaction: CommandInteraction) -> None` — Unsubscribe the invoking user from Steam sale DMs.
@@ -704,12 +704,14 @@ How often Steam is scraped, and how its sales are shown.
 Storing and querying Steam sales and their subscribers.
 
 ### `@dataclass class SteamSaleStore`
-Reads and writes Steam sales through one database session.
+Reads and writes Steam sales through one database session; the caller commits.
 
 - fields: session: Session
-- `record(scraped: ScrapedSale, *, now: datetime, outdated_after: timedelta) -> tuple[SteamSale, bool]` — Store a scraped sale, returning the stored row and whether it counts as new.
-- `refresh(sale: SteamSale, scraped: ScrapedSale, *, now: datetime) -> None` — Apply what Steam now says about ``sale``: its current discount, end and properties.
-- `remove(sale: SteamSale) -> None` — Soft-delete ``sale`` and its properties.
+- `record(scraped: ScrapedSale, *, now: datetime, outdated_after: timedelta) -> tuple[SteamSale, bool]` — Store one scraped sale; see :meth:`record_many`.
+- `record_many(scraped: Iterable[ScrapedSale], *, now: datetime, outdated_after: timedelta) -> list[tuple[SteamSale, bool]]` — Store scraped sales, returning each stored row with whether it counts as new.
+- `refresh(sale: SteamSale, scraped: ScrapedSale, *, now: datetime, stored: Mapping[SaleTypes, SteamSaleProperties]) -> None` — Apply what Steam now says about ``sale``: its current discount, end and properties.
+- `property_rows(sale_ids: Iterable[int | None]) -> defaultdict[int, dict[SaleTypes, SteamSaleProperties]]` — Return the property rows (deleted ones too) of each sale ID, in one query.
+- `remove(sale: SteamSale, stored: Mapping[SaleTypes, SteamSaleProperties]) -> None` — Soft-delete ``sale`` and its properties, given its property rows from :meth:`property_rows`.
 - `properties(sales: Iterable[SteamSale]) -> dict[int, set[SaleTypes]]` — Return the properties of each of ``sales``, by sale ID.
 - `current_sales(percent: int, *, now: datetime, outdated_after: timedelta) -> list[SteamSale]` — Return the sales of at least ``percent`` still running: biggest discount first, then cheapest.
 - `unseen_without_end(moment: datetime, percent: int, *, outdated_after: timedelta) -> list[SteamSale]` — Return the shown sales of at least ``percent`` last seen before ``moment``, longest unseen first.

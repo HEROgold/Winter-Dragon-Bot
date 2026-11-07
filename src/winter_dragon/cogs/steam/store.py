@@ -5,13 +5,13 @@ lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 
 lazy from sqlmodel import col, or_, select
-lazy from wd_db.extension.lifecycle import alive, alive_by_id, create_or_restore, soft_delete, upsert
+lazy from wd_db.extension.lifecycle import alive, alive_by_id, soft_delete, upsert
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Iterable, Sequence
+    lazy from collections.abc import Iterable, Mapping, Sequence
     lazy from datetime import datetime, timedelta
 
     lazy from sqlmodel import Session
@@ -22,81 +22,122 @@ if TYPE_CHECKING:
 
 @dataclass
 class SteamSaleStore:
-    """Reads and writes Steam sales through one database session."""
+    """Reads and writes Steam sales through one database session; the caller commits."""
 
     session: Session
 
     def record(self, scraped: ScrapedSale, *, now: datetime, outdated_after: timedelta) -> tuple[SteamSale, bool]:
-        """Store a scraped sale, returning the stored row and whether it counts as new.
+        """Store one scraped sale; see :meth:`record_many`."""
+        return self.record_many([scraped], now=now, outdated_after=outdated_after)[0]
+
+    def record_many(
+        self,
+        scraped: Iterable[ScrapedSale],
+        *,
+        now: datetime,
+        outdated_after: timedelta,
+    ) -> list[tuple[SteamSale, bool]]:
+        """Store scraped sales, returning each stored row with whether it counts as new.
 
         A sale is new when it wasn't known, was deleted (it's restored), or was outdated (not seen for
         ``outdated_after``) and so worth announcing again. A known sale keeps its ``sale_end`` unless the scrape
-        found one.
+        found one. The known sales and their properties are loaded in two queries, whatever the batch size.
         """
-        known = alive_by_id(self.session, SteamSale, scraped.id)
-        is_new = known is None or known.is_outdated(outdated_after, now)
+        batch = list(scraped)
+        ids = [sale.id for sale in batch]
+        stored = {row.id: row for row in self.session.exec(select(SteamSale).where(col(SteamSale.id).in_(ids)))}
+        property_rows = self.property_rows(ids)
+        recorded: list[tuple[SteamSale, bool]] = []
+        for sale in batch:
+            known = stored.get(sale.id)
+            if known is not None and known.deleted_at is not None:
+                known = None
+            is_new = known is None or known.is_outdated(outdated_after, now)
 
-        def update_known(sale: SteamSale) -> None:
-            sale.title = scraped.title
-            sale.url = scraped.url
-            sale.sale_percent = scraped.sale_percent
-            sale.final_price = scraped.final_price
-            sale.update_datetime = now
-            if is_new:
-                sale.discovered_at = now
-            if scraped.sale_end is not None:
-                sale.sale_end = scraped.sale_end
-
-        sale = upsert(
-            self.session,
-            SteamSale(
-                id=scraped.id,
-                title=scraped.title,
-                url=scraped.url,
-                sale_percent=scraped.sale_percent,
-                final_price=scraped.final_price,
+            fresh = SteamSale(
+                id=sale.id,
+                title=sale.title,
+                url=sale.url,
+                sale_percent=sale.sale_percent,
+                final_price=sale.final_price,
                 update_datetime=now,
                 discovered_at=now,
-                sale_end=scraped.sale_end,
-            ),
-            update_known,
-        )
-        self._add_properties(scraped.id, scraped.properties)
-        self.session.commit()
-        self.session.refresh(sale)
-        return sale, is_new
+                sale_end=sale.sale_end,
+            )
+            if sale.id in stored:  # loaded above, so upsert finds it in the session without asking the database
+                row = upsert(self.session, fresh, lambda row, sale=sale, new=is_new: self._update(row, sale, now, new=new))
+            else:
+                self.session.add(fresh)
+                row = fresh
+            self._add_properties(sale.id, sale.properties, property_rows[sale.id])
+            recorded.append((row, is_new))
+        self.session.flush()
+        return recorded
 
-    def refresh(self, sale: SteamSale, scraped: ScrapedSale, *, now: datetime) -> None:
+    @staticmethod
+    def _update(row: SteamSale, sale: ScrapedSale, now: datetime, *, new: bool) -> None:
+        row.title = sale.title
+        row.url = sale.url
+        row.sale_percent = sale.sale_percent
+        row.final_price = sale.final_price
+        row.update_datetime = now
+        if new:
+            row.discovered_at = now
+        if sale.sale_end is not None:
+            row.sale_end = sale.sale_end
+
+    def refresh(
+        self,
+        sale: SteamSale,
+        scraped: ScrapedSale,
+        *,
+        now: datetime,
+        stored: Mapping[SaleTypes, SteamSaleProperties],
+    ) -> None:
         """Apply what Steam now says about ``sale``: its current discount, end and properties.
 
-        An end that has already passed is dropped, so a sale still running past its announced end waits for the
-        next regular scrape instead of being checked again in a loop.
+        ``stored`` holds the sale's property rows, from :meth:`property_rows`. An end that has already passed is
+        dropped, so a sale still running past its announced end waits for the next regular scrape instead of being
+        checked again in a loop.
         """
         sale.sale_percent = scraped.sale_percent
         sale.final_price = scraped.final_price
         sale.update_datetime = now
         sale.sale_end = scraped.sale_end if scraped.sale_end is not None and scraped.sale_end > now else None
         self.session.add(sale)
-        self._add_properties(sale.id, scraped.properties)
-        self.session.commit()
+        self._add_properties(sale.id, scraped.properties, stored)
 
-    def _add_properties(self, sale_id: int | None, properties: Iterable[SaleTypes]) -> None:
+    def _add_properties(
+        self,
+        sale_id: int | None,
+        properties: Iterable[SaleTypes],
+        stored: Mapping[SaleTypes, SteamSaleProperties],
+    ) -> None:
         """Store any of ``properties`` the sale doesn't have yet, restoring the ones it had before."""
         if sale_id is None:
             return
-        known = {row.property for row in self._properties_of(sale_id)}
-        for sale_type in set(properties) - known:
-            create_or_restore(self.session, SteamSaleProperties(steam_sale_id=sale_id, property=sale_type))
+        for sale_type in set(properties):
+            row = stored.get(sale_type)
+            if row is None:
+                self.session.add(SteamSaleProperties(steam_sale_id=sale_id, property=sale_type))
+            elif row.deleted_at is not None:
+                row.deleted_at = None
+                self.session.add(row)
 
-    def _properties_of(self, sale_id: int | None) -> Sequence[SteamSaleProperties]:
-        return self.session.exec(alive(SteamSaleProperties).where(SteamSaleProperties.steam_sale_id == sale_id)).all()
+    def property_rows(self, sale_ids: Iterable[int | None]) -> defaultdict[int, dict[SaleTypes, SteamSaleProperties]]:
+        """Return the property rows (deleted ones too) of each sale ID, in one query."""
+        ids = [sale_id for sale_id in sale_ids if sale_id is not None]
+        found: defaultdict[int, dict[SaleTypes, SteamSaleProperties]] = defaultdict(dict)
+        for row in self.session.exec(select(SteamSaleProperties).where(col(SteamSaleProperties.steam_sale_id).in_(ids))):
+            found[row.steam_sale_id][row.property] = row
+        return found
 
-    def remove(self, sale: SteamSale) -> None:
-        """Soft-delete ``sale`` and its properties."""
-        for row in self._properties_of(sale.id):
-            soft_delete(self.session, row)
+    def remove(self, sale: SteamSale, stored: Mapping[SaleTypes, SteamSaleProperties]) -> None:
+        """Soft-delete ``sale`` and its properties, given its property rows from :meth:`property_rows`."""
+        for row in stored.values():
+            if row.deleted_at is None:
+                soft_delete(self.session, row)
         soft_delete(self.session, sale)
-        self.session.commit()
 
     def properties(self, sales: Iterable[SteamSale]) -> dict[int, set[SaleTypes]]:
         """Return the properties of each of ``sales``, by sale ID."""

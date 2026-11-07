@@ -118,6 +118,21 @@ def _seed(engine: Engine, *sales: ScrapedSale, now: datetime = NOW) -> None:
     with Session(engine) as session:
         for sale in sales:
             SteamSaleStore(session).record(sale, now=now, outdated_after=OUTDATED)
+        session.commit()
+
+
+async def _scrape(cog: SteamSales, engine: Engine, now: datetime) -> None:
+    """Run :meth:`SteamSales.scrape` and commit, as :meth:`SteamSales.scrape_and_recheck` does."""
+    with Session(engine) as session:
+        await cog.scrape(SteamSaleStore(session), now)
+        session.commit()
+
+
+async def _recheck_due(cog: SteamSales, engine: Engine, now: datetime) -> None:
+    """Run :meth:`SteamSales.recheck_due` and commit, as :meth:`SteamSales.scrape_and_recheck` does."""
+    with Session(engine) as session:
+        await cog.recheck_due(SteamSaleStore(session), now)
+        session.commit()
 
 
 def _percent(value: int) -> list[InteractionDataOption]:
@@ -269,7 +284,7 @@ async def test_scrape_stores_sales_with_their_end_and_notifies(engine: Engine) -
     cog, client = _cog(engine)
     _sync_steam_group(cog)
 
-    await cog.scrape(NOW)
+    await _scrape(cog, engine, NOW)
 
     # every sale from complete_percent up, then the top sellers down to the lowest subscriber threshold
     assert FakeScraper.queries == [(SteamSettings.complete_percent, None), (30, SteamSettings.top_sellers)]
@@ -283,7 +298,7 @@ async def test_scrape_stores_sales_with_their_end_and_notifies(engine: Engine) -
 async def test_scrape_without_subscribers_stores_down_to_the_configured_percent(engine: Engine) -> None:
     cog, _client = _cog(engine)
     _sync_steam_group(cog)
-    await cog.scrape(NOW)
+    await _scrape(cog, engine, NOW)
     assert FakeScraper.queries[-1] == (SteamSettings.stored_percent, SteamSettings.top_sellers)
 
 
@@ -291,7 +306,7 @@ async def test_scrape_ignores_subscriber_thresholds_above_the_configured_percent
     seed(engine, SteamUsers(id=7, sale_threshold=100, last_notification=NOW))
     cog, _client = _cog(engine)
     _sync_steam_group(cog)
-    await cog.scrape(NOW)
+    await _scrape(cog, engine, NOW)
     assert FakeScraper.queries[-1] == (SteamSettings.stored_percent, SteamSettings.top_sellers)
 
 
@@ -312,7 +327,7 @@ async def test_recheck_removes_ended_sales(engine: Engine) -> None:
     FakeScraper.current = {"https://store.steampowered.com/app/1/": None}
     cog, _client = _cog(engine)
 
-    await cog.recheck_due(NOW)
+    await _recheck_due(cog, engine, NOW)
 
     with Session(engine) as session:
         assert session.exec(alive(SteamSale)).all() == []
@@ -324,7 +339,7 @@ async def test_recheck_updates_sales_that_continue(engine: Engine) -> None:
     FakeScraper.current = {"https://store.steampowered.com/app/1/": app_sale(1, percent=75, sale_end=new_end)}
     cog, _client = _cog(engine)
 
-    await cog.recheck_due(NOW)
+    await _recheck_due(cog, engine, NOW)
 
     with Session(engine) as session:
         sale = session.exec(alive(SteamSale)).one()
@@ -337,7 +352,7 @@ async def test_recheck_keeps_sales_when_steam_is_unavailable(engine: Engine) -> 
     FakeScraper.current = {"https://store.steampowered.com/app/1/": ScrapeFailure.UNAVAILABLE}
     cog, _client = _cog(engine)
 
-    await cog.recheck_due(NOW)
+    await _recheck_due(cog, engine, NOW)
 
     with Session(engine) as session:
         assert session.exec(alive(SteamSale)).one().sale_end == ended
@@ -348,7 +363,7 @@ async def test_recheck_ignores_sales_not_yet_due(engine: Engine) -> None:
     FakeScraper.current = {"https://store.steampowered.com/app/1/": None}
     cog, _client = _cog(engine)
 
-    await cog.recheck_due(NOW)
+    await _recheck_due(cog, engine, NOW)
 
     with Session(engine) as session:
         assert len(session.exec(alive(SteamSale)).all()) == 1
@@ -367,7 +382,7 @@ def test_dlc_property_is_kept_on_refresh(engine: Engine) -> None:
             final_price=0.0,
             properties=frozenset({SaleTypes.DLC}),
         )
-        store.refresh(sale, dlc, now=NOW)
+        store.refresh(sale, dlc, now=NOW, stored=store.property_rows([sale.id])[sale.id])
         assert store.properties([sale]) == {1: {SaleTypes.DLC}}
 
 
@@ -383,7 +398,7 @@ async def test_scrape_verifies_sales_it_no_longer_lists(engine: Engine) -> None:
     cog, _client = _cog(engine)
     _sync_steam_group(cog)
 
-    await cog.scrape(NOW)
+    await _scrape(cog, engine, NOW)
 
     with Session(engine) as session:
         sales = {sale.id: sale for sale in session.exec(alive(SteamSale))}
@@ -397,7 +412,7 @@ async def test_empty_scrape_removes_nothing(engine: Engine) -> None:
     cog, _client = _cog(engine)
     _sync_steam_group(cog)
 
-    await cog.scrape(NOW)
+    await _scrape(cog, engine, NOW)
 
     with Session(engine) as session:
         assert len(session.exec(alive(SteamSale)).all()) == 1
@@ -424,7 +439,7 @@ async def test_scrape_defers_unseen_sales_with_a_known_end(engine: Engine) -> No
     cog, _client = _cog(engine)
     _sync_steam_group(cog)
 
-    await cog.scrape(NOW)
+    await _scrape(cog, engine, NOW)
 
     with Session(engine) as session:
         assert session.exec(alive(SteamSale).where(SteamSale.id == 2)).one().sale_end == end
@@ -436,7 +451,7 @@ async def test_recheck_waits_while_steam_rate_limits_us(engine: Engine) -> None:
     cog, _client = _cog(engine)
     cog.throttle.rate_limited(60)
 
-    await cog.recheck_due(NOW)
+    await _recheck_due(cog, engine, NOW)
 
     with Session(engine) as session:
         assert len(session.exec(alive(SteamSale)).all()) == 1
