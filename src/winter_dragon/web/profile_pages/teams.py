@@ -1,7 +1,7 @@
 """The Profile's teams page: the member's lasting teams, with their captain, members, and the tournaments each one entered."""
 
-lazy from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 lazy from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import alive

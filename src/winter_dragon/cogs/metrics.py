@@ -1,8 +1,8 @@
 """Serves the bot's Prometheus metrics on ``/metrics``; see :mod:`winter_dragon.metrics`."""
 
-lazy from typing import override
+from typing import override
 
-lazy from wd_bot.cogs import Cog
+from wd_bot.cogs import Cog
 
 lazy from winter_dragon.bot_stats import BotStats
 lazy from winter_dragon.metrics import Exporter

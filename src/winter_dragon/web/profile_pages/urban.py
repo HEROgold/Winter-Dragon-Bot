@@ -3,7 +3,7 @@
 lazy from sqlmodel import Session, col
 lazy from wd_db.extension.lifecycle import owned_by
 
-lazy from winter_dragon.cogs.urban import Lookup
+from winter_dragon.cogs.urban import Lookup
 lazy from winter_dragon.web.profile import ProfileContext, has_rows, profile_page
 
 

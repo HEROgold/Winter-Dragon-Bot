@@ -1,6 +1,6 @@
 """The messages the team features post: the split teams, with the buttons under them."""
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import ActionRow, Button, ButtonStyle
 lazy from wd_discord.embed import Embed, EmbedField

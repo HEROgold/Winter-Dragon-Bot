@@ -5,7 +5,7 @@ next card a member opens sends them through a silent sign-in that reads their gu
 """
 
 from datetime import timedelta
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from wd_types.clock import utc_now
 

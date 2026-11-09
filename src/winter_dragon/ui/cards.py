@@ -5,8 +5,8 @@ called off (:attr:`Tone.STOP`). Colors and marks are read from ``config.ini`` ea
 next edit without a restart.
 """
 
+from typing import TYPE_CHECKING
 lazy from enum import Enum, auto
-lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.color import Color
 lazy from wd_discord.components import Container, TextDisplay

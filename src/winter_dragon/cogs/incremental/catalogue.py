@@ -7,10 +7,10 @@ stop startup. Saves refer to entries by :class:`CurrencyKey` and :class:`Generat
 from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
+lazy import tomllib
 
 from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, ValidationError, model_validator
 from pydantic_core import core_schema
-lazy import tomllib
 lazy from wd_discord.limits import MAX_ACTION_ROW_BUTTONS, MAX_ACTION_ROWS
 
 

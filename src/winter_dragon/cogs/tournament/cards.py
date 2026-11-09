@@ -1,9 +1,9 @@
 """The messages a tournament shows: its sign-up card, bracket, match cards and votes, with their buttons."""
 
-lazy from dataclasses import dataclass
-lazy from enum import StrEnum
+from dataclasses import dataclass
+from enum import StrEnum
+from typing import TYPE_CHECKING
 lazy from itertools import batched
-lazy from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import (
     ActionRow,

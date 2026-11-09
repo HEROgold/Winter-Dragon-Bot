@@ -1,6 +1,6 @@
 """Text the bot's messages share."""
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from wd_discord.limits import MAX_EMBED_FIELD_VALUE_LENGTH, truncate
 

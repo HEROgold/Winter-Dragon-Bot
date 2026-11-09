@@ -5,21 +5,21 @@ from typing import Annotated
 lazy import random
 lazy from typing import TYPE_CHECKING, ClassVar, override
 
+from confkit.data_types import Hex
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
+from wd_bot.cogs import Cog
 from wd_bot.commands import Describe
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership, upsert
 from wd_types.clock import utc_now
-lazy from confkit.data_types import Hex
-lazy from wd_bot.cogs import Cog
 
 # Command resolves option annotations from module globals at runtime, so User must be available here.
-lazy from wd_discord import User  # noqa: TC002
+lazy from wd_discord import User
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_errors import Refused
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:

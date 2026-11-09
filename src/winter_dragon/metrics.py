@@ -15,7 +15,7 @@ lazy from prometheus_client import REGISTRY, start_http_server
 lazy from prometheus_client.core import GaugeMetricFamily
 lazy from wd_discord.telemetry import REST, Telemetry
 
-lazy from winter_dragon.config import Config
+from winter_dragon.config import Config
 
 
 if TYPE_CHECKING:

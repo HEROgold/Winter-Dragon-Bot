@@ -2,15 +2,15 @@
 
 lazy from typing import TYPE_CHECKING, override
 
+from wd_bot.cogs import Cog
 lazy from sqlmodel import Session
 lazy from wd_bot.checks import is_owner
-lazy from wd_bot.cogs import Cog
 lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused
 
+from winter_dragon.config import CogConfig
 lazy from winter_dragon.bot_stats import BotStats, BotStatsSnapshot, store_snapshot
-lazy from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:

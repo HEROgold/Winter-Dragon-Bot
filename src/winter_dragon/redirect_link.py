@@ -4,8 +4,8 @@ The bot builds these links and the dashboard serves them, so both read the rules
 and which query parameters the page takes.
 """
 
+import re
 from dataclasses import dataclass
-lazy import re
 lazy from urllib.parse import urlencode
 
 

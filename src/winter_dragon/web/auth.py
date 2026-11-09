@@ -5,7 +5,7 @@ lazy import secrets
 from fastapi import APIRouter, Depends
 lazy from fastapi import Request, status
 lazy from fastapi.responses import RedirectResponse
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from starlette.responses import Response
 
 lazy from winter_dragon.web.accounts import (
     NEXT_KEY,

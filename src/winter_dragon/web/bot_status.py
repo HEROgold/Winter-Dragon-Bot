@@ -1,11 +1,11 @@
 """The owners' stats page: what the bot serves, from the latest snapshot it stored."""
 
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter
 lazy from fastapi import Request
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from starlette.responses import Response
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.bot_stats import latest_snapshot

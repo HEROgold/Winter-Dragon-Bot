@@ -6,7 +6,7 @@ page lists exactly what deleting would remove.
 """
 
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from sqlalchemy import func, or_
 lazy from sqlmodel import Session, col, select
@@ -23,12 +23,12 @@ lazy from winter_dragon.web.formatting import humanized_name, plural, shown_valu
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Generator
+    from zoneinfo import ZoneInfo
 
     from sqlalchemy import Engine
     from sqlmodel.sql.expression import SelectOfScalar
     from wd_db.extension.lifecycle import LifecycleModel
     from wd_discord.snowflake import Snowflake
-    from zoneinfo import ZoneInfo
 
 
 DOCS_URL = "https://herogold.github.io/Winter-Dragon-Bot"

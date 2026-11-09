@@ -11,7 +11,7 @@ lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
-lazy from winter_dragon.member_hidden import MemberHiddenHook
+from winter_dragon.member_hidden import MemberHiddenHook
 
 lazy from .models import Team, TeamKind, TeamMember, TeamOrigin
 
