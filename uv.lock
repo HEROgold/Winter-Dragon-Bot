@@ -95,14 +95,14 @@ wheels = [
 
 [[package]]
 name = "confkit"
-version = "2.1.1"
+version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/17/c1/500f17f254be4266999345ced7f42c6916f61900ea7c9315c5c7ec972fa5/confkit-2.1.1.tar.gz", hash = "sha256:2677fb6b2947bacddf97ece2c1691d248074158efcc8d4b9fad162ea0eae1c35", size = 133482, upload-time = "2026-10-20T21:11:38.671Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/f5/dae7a997dfbe0fcbd800a4d1a4c43fe2e5190f12adc686f14c60012d15ef/confkit-3.0.0.tar.gz", hash = "sha256:6a4126341f68a65dc34328ef5d2cbb311bcf160fef060f3b98de22802b15bcb2", size = 193387, upload-time = "2026-11-01T00:59:24.966Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9f/43/f3366f355c52e0d73e5e08cd9cafb47279c5f52dc44fc175e8759e5ae327/confkit-2.1.1-py3-none-any.whl", hash = "sha256:258be883ce48ecf4770c82f496334881c12bfb997400686819378e007a54e44d", size = 22012, upload-time = "2026-10-20T21:11:37.694Z" },
+    { url = "https://files.pythonhosted.org/packages/5e/0c/4e7f1dcb5b917a285fd3a93d1a3e9de05efef098b6659d802bc599e99134/confkit-3.0.0-py3-none-any.whl", hash = "sha256:36308f52ecc553a97c1837d478e954789c766f27e619e565e39e40eb428f9ce7", size = 24453, upload-time = "2026-11-01T00:59:23.975Z" },
 ]
 
 [[package]]
