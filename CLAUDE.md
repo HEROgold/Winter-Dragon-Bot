@@ -28,7 +28,7 @@ Prefer lazy imports (import inside the function/method that uses the name) over 
 
 ### Issue tracker
 
-GitHub Issues on HEROgold/Winter-Dragon-Bot via `gh`; new issues auto-sync to Linear. See `docs/agents/issue-tracker.md`.
+GitHub Issues on HEROgold/Winter-Dragon-Bot via `gh`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
