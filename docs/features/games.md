@@ -120,5 +120,5 @@ Everything is stored, so a tournament survives a restart.
 
 Surface: `/tournament create | post | join | leave | enter | entry-add | entry-remove | lineup-in | lineup-out | start | bracket | match | log | ban | pick | vote | cancel`. Commands take the tournament with autocomplete, and the match options autocomplete the undecided matches.
 
-**Status:** ✅ Rebuilt in `src/winter_dragon/cogs/tournament/` (tables in `models.py`, bracket arithmetic in `bracket.py`, actions in `service.py`, messages in `cards.py`). The match phases replace `wd-cogs`' in-memory state machine and registry; voting, empty on `main`, is new. Linking the tournament store to an API service is still open (HER-355).
+**Status:** ✅ Rebuilt in `src/winter_dragon/cogs/tournament/` (tables in `models.py`, bracket arithmetic in `bracket.py`, actions in `service.py`, messages in `cards.py`). The match phases replace `wd-cogs`' in-memory state machine and registry; voting, empty on `main`, is new. Linking the tournament store to an API service is still open.
 **Source on `main`:** `src/winter_dragon/bot/extensions/tournament/`
