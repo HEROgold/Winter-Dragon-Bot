@@ -11,13 +11,14 @@ from sqlmodel import Session, col, select
 lazy from herogold.state import StateMachine
 lazy from sqlalchemy import exists
 lazy from sqlalchemy.orm import aliased
+lazy from wd_db.extension._herogold import Repository
 lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive, alive_by_id, create_or_restore, soft_delete, upsert
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
 lazy from winter_dragon.cogs.team.models import Team, TeamKind, TeamOrigin
-lazy from winter_dragon.cogs.team.service import create_temporary_teams, end_team, membership
+lazy from winter_dragon.cogs.team.service import create_temporary_teams, membership
 lazy from winter_dragon.cogs.team.split import split_into_teams
 lazy from winter_dragon.member_hidden import MemberHiddenHook, RemovedRows
 lazy from winter_dragon.stored import stored
@@ -47,7 +48,7 @@ lazy from .models import (
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Generator, Sequence
+    lazy from collections.abc import Generator, Iterable, Sequence
     lazy from datetime import datetime
     lazy from random import Random
 
@@ -134,6 +135,17 @@ def entries_of(session: Session, tournament: Tournament) -> list[TournamentEntry
 def roster(session: Session, entry: TournamentEntry) -> list[Snowflake]:
     """Return the user IDs of the entry's players."""
     return [Snowflake(player.user_id) for player in _players_of_entry(session, entry)]
+
+
+def rosters_of(session: Session, entries: Iterable[TournamentEntry]) -> dict[int, list[Snowflake]]:
+    """Return the user IDs of each entry's players, by entry ID, in one query whatever the number of entries."""
+    found: dict[int, list[Snowflake]] = {_id(entry): [] for entry in entries}
+    query = (
+        Repository[EntryPlayer](session).qs().where(col(EntryPlayer.entry_id).in_(list(found))).order_by(col(EntryPlayer.id))
+    )
+    for player in query.all():
+        found[player.entry_id].append(Snowflake(player.user_id))
+    return found
 
 
 def _players_of_entry(session: Session, entry: TournamentEntry) -> list[EntryPlayer]:
@@ -634,12 +646,12 @@ def report(
 
 
 def _end_temporary_teams(session: Session, entries: Sequence[TournamentEntry]) -> None:
-    """End the temporary teams behind ``entries`` now; a lasting team stays as it is."""
-    now = utc_now()
-    for entry in entries:
-        team = alive_by_id(session, Team, entry.team_id)
-        if team is not None:
-            end_team(session, team, now)
+    """End the temporary teams behind ``entries`` now, in one UPDATE; a lasting team, or one ended already, stays."""
+    Repository[Team](session).qs().where(
+        col(Team.id).in_([entry.team_id for entry in entries]),
+        col(Team.kind) == TeamKind.TEMPORARY,
+        col(Team.ended_at).is_(None),
+    ).update(ended_at=utc_now())
 
 
 def cancel(session: Session, tournament: Tournament) -> None:
