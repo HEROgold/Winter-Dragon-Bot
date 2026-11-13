@@ -44,7 +44,7 @@ class TeamVoiceChannel(DiscordKeyedModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(guild="guild_id")
 
     guild_id: int = Field(sa_type=BigInteger, index=True)
-    team_id: int = Field(index=True)
+    team_id: int = Field(foreign_key="team.id", index=True)
 
 
 VOICE_TABLES = (TeamVoiceChannel,)

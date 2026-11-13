@@ -44,7 +44,7 @@ class TeamMember(LifecycleModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(member="user_id")
     natural_key: ClassVar[tuple[str, ...]] = ("team_id", "user_id")
 
-    team_id: int = Field(index=True)
+    team_id: int = Field(foreign_key="team.id", index=True)
     user_id: int = Field(sa_type=BigInteger, index=True)
     joined_at: datetime = Field(sa_type=AwareDateTime)
 

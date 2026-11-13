@@ -6,8 +6,8 @@ Each function takes an open session and leaves committing to the caller. A refus
 
 lazy from typing import TYPE_CHECKING, override
 
-from sqlmodel import Session, col
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete
+lazy from sqlmodel import Session, col, select
+lazy from wd_db.extension._herogold import Repository
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
@@ -29,24 +29,29 @@ def create_team(session: Session, name: str, captain_id: Snowflake) -> Team:
     if not stripped:
         msg = "A team needs a name."
         raise Refused(msg)
-    team = Team(name=stripped, kind=TeamKind.LASTING, origin=TeamOrigin.CREATED, captain_id=int(captain_id))
-    session.add(team)
+    team = Repository[Team](session).add(
+        Team(name=stripped, kind=TeamKind.LASTING, origin=TeamOrigin.CREATED, captain_id=int(captain_id)),
+    )
     session.flush()
-    create_or_restore(session, TeamMember(team_id=team.id or 0, user_id=int(captain_id), joined_at=utc_now()))
+    Repository[TeamMember](session).add(TeamMember(team_id=team.id or 0, user_id=int(captain_id), joined_at=utc_now()))
     return team
 
 
 def create_temporary_teams(session: Session, groups: Sequence[Sequence[Snowflake]], origin: TeamOrigin) -> list[Team]:
-    """Store one temporary team per group, named Team 1, Team 2, ..., with no captain; return them in order."""
-    teams: list[Team] = []
-    for number, group in enumerate(groups, start=1):
-        team = Team(name=f"Team {number}", kind=TeamKind.TEMPORARY, origin=origin)
-        session.add(team)
-        session.flush()
-        now = utc_now()
-        for user_id in group:
-            create_or_restore(session, TeamMember(team_id=team.id or 0, user_id=int(user_id), joined_at=now))
-        teams.append(team)
+    """Store one temporary team per group, named Team 1, Team 2, ..., with no captain; return them in order.
+
+    The teams are stored in one statement, then all their members in another, whatever the number of groups.
+    """
+    teams = Repository[Team](session).add_all(
+        Team(name=f"Team {number}", kind=TeamKind.TEMPORARY, origin=origin) for number in range(1, len(groups) + 1)
+    )
+    session.flush()
+    now = utc_now()
+    Repository[TeamMember](session).add_all(
+        TeamMember(team_id=team.id or 0, user_id=int(user_id), joined_at=now)
+        for team, group in zip(teams, groups, strict=True)
+        for user_id in group
+    )
     return teams
 
 
@@ -77,19 +82,22 @@ def keep(session: Session, team: Team, user_id: Snowflake, name: str) -> None:
 
 
 def end_expired(session: Session, now: datetime, lifetime: timedelta) -> int:
-    """End every alive temporary team, except a solo tournament's, made at or before ``now - lifetime``; return how many."""
+    """End every alive temporary team, except a solo tournament's, made at or before ``now - lifetime``; return how many.
+
+    One UPDATE, whatever the number of teams.
+    """
     cutoff = now - lifetime
-    query = alive(Team).where(
-        col(Team.kind) == TeamKind.TEMPORARY,
-        col(Team.ended_at).is_(None),
-        col(Team.origin) != TeamOrigin.SOLO_TOURNAMENT,
-        col(Team.created_at) <= cutoff,
+    return (
+        Repository[Team](session)
+        .qs()
+        .where(
+            col(Team.kind) == TeamKind.TEMPORARY,
+            col(Team.ended_at).is_(None),
+            col(Team.origin) != TeamOrigin.SOLO_TOURNAMENT,
+            col(Team.created_at) <= cutoff,
+        )
+        .update(ended_at=now)
     )
-    expired = list(session.exec(query))
-    for team in expired:
-        team.ended_at = now
-        session.add(team)
-    return len(expired)
 
 
 def end_team(session: Session, team: Team, now: datetime) -> None:
@@ -103,21 +111,26 @@ def end_team(session: Session, team: Team, now: datetime) -> None:
 def members_of(session: Session, team: Team) -> Generator[TeamMember]:
     """Yield the team's members, longest-standing first."""
     query = (
-        alive(TeamMember).where(TeamMember.team_id == (team.id or 0)).order_by(col(TeamMember.joined_at), col(TeamMember.id))
+        Repository[TeamMember](session)
+        .qs()
+        .where(col(TeamMember.team_id) == (team.id or 0))
+        .order_by(col(TeamMember.joined_at), col(TeamMember.id))
     )
-    yield from session.exec(query)
+    yield from query.all()
 
 
 def teams_of(session: Session, user_id: Snowflake) -> Generator[Team]:
-    """Yield the alive, unended teams ``user_id`` is a member of, by name."""
-    team_ids = [member.team_id for member in session.exec(alive(TeamMember).where(TeamMember.user_id == int(user_id)))]
-    query = alive(Team).where(col(Team.id).in_(team_ids), col(Team.ended_at).is_(None)).order_by(col(Team.name))
-    yield from session.exec(query)
+    """Yield the alive, unended teams ``user_id`` is a member of, by name, in one statement."""
+    joined = select(col(TeamMember.team_id)).where(col(TeamMember.user_id) == int(user_id), *TeamMember.default_criteria())
+    query = (
+        Repository[Team](session).qs().where(col(Team.id).in_(joined), col(Team.ended_at).is_(None)).order_by(col(Team.name))
+    )
+    yield from query.all()
 
 
 def membership(session: Session, team: Team, user_id: Snowflake) -> TeamMember | None:
     """Return ``user_id``'s alive membership of ``team``, if they're in it."""
-    return session.exec(alive(TeamMember).where(TeamMember.team_id == team.id, TeamMember.user_id == int(user_id))).first()
+    return Repository[TeamMember](session).qs().filter_by(team_id=team.id, user_id=int(user_id)).first()
 
 
 def leave(session: Session, team: Team, user_id: Snowflake) -> None:
@@ -129,10 +142,10 @@ def leave(session: Session, team: Team, user_id: Snowflake) -> None:
     if member is None:
         msg = "You aren't in that team."
         raise Refused(msg)
-    soft_delete(session, member)
+    Repository[TeamMember](session).delete(member)
     remaining = list(members_of(session, team))
     if not remaining:
-        soft_delete(session, team)
+        Repository[Team](session).delete(team)
     elif team.captain_id == int(user_id):
         team.captain_id = remaining[0].user_id
         session.add(team)
@@ -146,11 +159,11 @@ def require_captain(team: Team, user_id: Snowflake) -> None:
 
 
 def join(session: Session, team: Team, user_id: Snowflake) -> None:
-    """Add ``user_id`` to ``team``, joining now; refuse when they're in it already."""
+    """Add ``user_id`` to ``team``, joining now, or bring back the membership they left; refuse when they're in it."""
     if membership(session, team, user_id) is not None:
         msg = "You're in that team already."
         raise Refused(msg)
-    create_or_restore(session, TeamMember(team_id=team.id or 0, user_id=int(user_id), joined_at=utc_now()))
+    Repository[TeamMember](session).upsert([TeamMember(team_id=team.id or 0, user_id=int(user_id), joined_at=utc_now())])
 
 
 def kick(session: Session, team: Team, captain_id: Snowflake, user_id: Snowflake) -> None:
@@ -163,7 +176,7 @@ def kick(session: Session, team: Team, captain_id: Snowflake, user_id: Snowflake
     if member is None:
         msg = "They aren't in that team."
         raise Refused(msg)
-    soft_delete(session, member)
+    Repository[TeamMember](session).delete(member)
 
 
 def hand_over(session: Session, team: Team, captain_id: Snowflake, user_id: Snowflake) -> None:
@@ -177,11 +190,10 @@ def hand_over(session: Session, team: Team, captain_id: Snowflake, user_id: Snow
 
 
 def disband(session: Session, team: Team, captain_id: Snowflake) -> None:
-    """Disband ``team`` for its captain: soft-delete it and every membership."""
+    """Disband ``team`` for its captain: soft-delete it and every membership, in two statements."""
     require_captain(team, captain_id)
-    for member in list(members_of(session, team)):
-        soft_delete(session, member)
-    soft_delete(session, team)
+    Repository[TeamMember](session).qs().filter_by(team_id=team.id).soft_delete()
+    Repository[Team](session).delete(team)
 
 
 class LeaveHiddenMember(MemberHiddenHook):
