@@ -492,6 +492,7 @@ The /reminder command group: one-off and repeating reminders, sent as DMs by a b
 
 - `reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generator[ApplicationCommandOptionChoice]` — Yield a choice for each of ``reminders`` whose content contains ``current``, ignoring case.
 - `async send_reminder(client: Client, reminder: AnyReminder) -> bool` — DM ``reminder`` to its user; ``False`` when Discord refused it (e.g. their DMs are closed).
+- `delete_reminder(session: Session, reminder: AnyReminder) -> None` — Soft-delete ``reminder`` through the repository of its table; the caller commits.
 
 ### `class Reminders(GroupCog, name='reminder', description='Set reminders for yourself')`
 Stores reminders and DMs them to their users when due, from a background task.
