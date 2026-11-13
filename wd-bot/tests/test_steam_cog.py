@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, ClassVar, Self
 
 import pytest
+from sqlalchemy import event
 from sqlmodel import Session
 from wd_bot.registry import GLOBAL
 from wd_bot.testing import detached_cog
@@ -16,6 +17,7 @@ from wd_discord.testing import RecordingClient, message_json
 import winter_dragon.cogs.steam.cog as module
 from winter_dragon.cogs.steam.cog import SteamSales
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamUsers
+from winter_dragon.cogs.steam.notifier import SteamSaleNotifier
 from winter_dragon.cogs.steam.scrapers import ScrapedSale, ScrapeFailure
 from winter_dragon.cogs.steam.settings import SteamSettings
 from winter_dragon.cogs.steam.store import SteamSaleStore
@@ -121,18 +123,14 @@ def _seed(engine: Engine, *sales: ScrapedSale, now: datetime = NOW) -> None:
         session.commit()
 
 
-async def _scrape(cog: SteamSales, engine: Engine, now: datetime) -> None:
-    """Run :meth:`SteamSales.scrape` and commit, as :meth:`SteamSales.scrape_and_recheck` does."""
-    with Session(engine) as session:
-        await cog.scrape(SteamSaleStore(session), now)
-        session.commit()
+async def _scrape(cog: SteamSales, _engine: Engine, now: datetime) -> None:
+    """Run :meth:`SteamSales.scrape`, which opens and commits its own scopes."""
+    await cog.scrape(now)
 
 
-async def _recheck_due(cog: SteamSales, engine: Engine, now: datetime) -> None:
-    """Run :meth:`SteamSales.recheck_due` and commit, as :meth:`SteamSales.scrape_and_recheck` does."""
-    with Session(engine) as session:
-        await cog.recheck_due(SteamSaleStore(session), now)
-        session.commit()
+async def _recheck_due(cog: SteamSales, _engine: Engine, now: datetime) -> None:
+    """Run :meth:`SteamSales.recheck_due`, which opens and commits its own scopes."""
+    await cog.recheck_due(now)
 
 
 def _percent(value: int) -> list[InteractionDataOption]:
@@ -455,3 +453,52 @@ async def test_recheck_waits_while_steam_rate_limits_us(engine: Engine) -> None:
 
     with Session(engine) as session:
         assert len(session.exec(alive(SteamSale)).all()) == 1
+
+
+async def test_no_connection_is_held_while_waiting_on_steam_or_discord(
+    engine: Engine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    held = peak = 0
+    waiting: dict[str, list[int]] = {"query_sales": [], "get_sales": [], "dm": []}
+
+    @event.listens_for(engine, "checkout")
+    def _checked_out(*_: object) -> None:
+        nonlocal held, peak
+        held += 1
+        peak = max(peak, held)
+
+    @event.listens_for(engine, "checkin")  # codespell:ignore checkin
+    def _checked_in(*_: object) -> None:
+        nonlocal held
+        held -= 1
+
+    def probe(name: str, original: object) -> object:
+        def wrapper(*args: object, **kwargs: object) -> object:
+            waiting[name].append(held)
+            return original(*args, **kwargs)  # ty: ignore[call-non-callable]
+
+        return wrapper
+
+    async def probed_send(self: SteamSaleNotifier, *args: object) -> bool:
+        waiting["dm"].append(held)
+        return await original_send(self, *args)  # ty: ignore[invalid-argument-type]
+
+    original_send = SteamSaleNotifier._send  # noqa: SLF001
+    monkeypatch.setattr(FakeScraper, "query_sales", probe("query_sales", FakeScraper.query_sales))
+    monkeypatch.setattr(FakeScraper, "get_sales", probe("get_sales", FakeScraper.get_sales))
+    monkeypatch.setattr(SteamSaleNotifier, "_send", probed_send)
+
+    FakeScraper.sales = [app_sale(1)]
+    FakeScraper.current = {"https://store.steampowered.com/app/2/": None}
+    _seed(engine, app_sale(2, sale_end=NOW - timedelta(minutes=5)))
+    seed(engine, SteamUsers(id=7, sale_threshold=30, last_notification=NOW - timedelta(hours=1)))
+    cog, _client = _cog(engine)
+    _sync_steam_group(cog)
+
+    await _scrape(cog, engine, NOW)
+    await _recheck_due(cog, engine, NOW)
+
+    assert peak >= 1  # the counter sees the scopes' own connections, so zero while waiting means something
+    assert all(waiting.values()), waiting  # each kind of wait was reached
+    assert {name: set(counts) for name, counts in waiting.items()} == {"query_sales": {0}, "get_sales": {0}, "dm": {0}}

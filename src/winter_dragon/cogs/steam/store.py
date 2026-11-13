@@ -1,11 +1,13 @@
 """Storing and querying Steam sales and their subscribers."""
 
+lazy from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING
 
 lazy from sqlmodel import col, or_
 lazy from wd_db.extension._herogold import Repository, Scoped
 
 lazy from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
+lazy from winter_dragon.cogs.steam.urls import SteamURL
 
 
 if TYPE_CHECKING:
@@ -16,6 +18,25 @@ if TYPE_CHECKING:
     lazy from wd_discord.snowflake import Snowflake
 
     lazy from winter_dragon.cogs.steam.scrapers import ScrapedSale
+
+
+@dataclass(frozen=True)
+class SaleRef:
+    """What a re-check needs to know of a stored sale, copied out so it outlives the session that read it."""
+
+    id: int
+    title: str
+    url: str
+
+    @property
+    def steam_url(self) -> SteamURL:
+        """The sale's store page."""
+        return SteamURL(self.url)
+
+    @classmethod
+    def of_all(cls, sales: Iterable[SteamSale]) -> list[SaleRef]:
+        """Copy the sales that have an ID."""
+        return [cls(sale.id, sale.title, sale.url) for sale in sales if sale.id is not None]
 
 
 class SteamSaleStore(Repository[SteamSale], Scoped):
@@ -105,6 +126,10 @@ class SteamSaleStore(Repository[SteamSale], Scoped):
         """Store any property the sales don't have yet, restoring the ones they had before, in one lookup."""
         rows = [SteamSaleProperties(steam_sale_id=sale.id, property=kind) for sale in scraped for kind in sale.properties]
         self._properties.upsert(rows)
+
+    def in_ids(self, ids: Iterable[int]) -> dict[int, SteamSale]:
+        """Return the alive sales among ``ids``, by ID, in one query."""
+        return self.qs().where(col(SteamSale.id).in_(list(ids))).in_bulk()
 
     def remove(self, sales: Iterable[SteamSale]) -> None:
         """Soft-delete ``sales`` and their properties, in two statements whatever their number."""
