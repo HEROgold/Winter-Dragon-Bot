@@ -4,7 +4,7 @@ from datetime import datetime
 lazy from enum import StrEnum
 lazy from typing import ClassVar
 
-from sqlalchemy import BigInteger
+from sqlalchemy import BigInteger, ForeignKey
 from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership, Through
@@ -91,7 +91,10 @@ class Tournament(LifecycleModel, table=True):
     mode: TeamMode
     team_size: int
     status: TournamentStatus = TournamentStatus.SIGNUP
-    winner_entry_id: int | None = None
+    winner_entry_id: int | None = Field(
+        default=None,
+        sa_column_args=(ForeignKey("tournamententry.id", ondelete="SET NULL", use_alter=True),),
+    )
 
 
 class TournamentPost(LifecycleModel, table=True):
@@ -99,7 +102,7 @@ class TournamentPost(LifecycleModel, table=True):
 
     ownership: ClassVar[Ownership] = Ownership(through=Through("tournament_id", Tournament))
 
-    tournament_id: int = Field(index=True)
+    tournament_id: int = Field(foreign_key="tournament.id", index=True)
     channel_id: int = Field(sa_type=BigInteger)
     message_id: int = Field(sa_type=BigInteger)
 
@@ -109,7 +112,7 @@ class TournamentEntry(LifecycleModel, table=True):
 
     ownership: ClassVar[Ownership] = Ownership(through=Through("tournament_id", Tournament))
 
-    tournament_id: int = Field(index=True)
+    tournament_id: int = Field(foreign_key="tournament.id", index=True)
     team_id: int = Field(index=True)
     name: str
 
@@ -120,7 +123,7 @@ class TournamentSignup(LifecycleModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(member="user_id", through=Through("tournament_id", Tournament))
     natural_key: ClassVar[tuple[str, ...]] = ("tournament_id", "user_id")
 
-    tournament_id: int = Field(index=True)
+    tournament_id: int = Field(foreign_key="tournament.id", index=True)
     user_id: int = Field(sa_type=BigInteger)
 
 
@@ -130,7 +133,7 @@ class EntryPlayer(LifecycleModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(member="user_id", through=Through("entry_id", TournamentEntry))
     natural_key: ClassVar[tuple[str, ...]] = ("entry_id", "user_id")
 
-    entry_id: int = Field(index=True)
+    entry_id: int = Field(foreign_key="tournamententry.id", index=True)
     user_id: int = Field(sa_type=BigInteger)
 
 
@@ -139,14 +142,14 @@ class TournamentMatch(LifecycleModel, table=True):
 
     ownership: ClassVar[Ownership] = Ownership(through=Through("tournament_id", Tournament))
 
-    tournament_id: int = Field(index=True)
+    tournament_id: int = Field(foreign_key="tournament.id", index=True)
     round: int
     slot: int
     """The match's place in its round, top to bottom; it feeds slot ``slot // 2`` of the next round."""
-    entry_a_id: int | None = None
-    entry_b_id: int | None = None
+    entry_a_id: int | None = Field(default=None, foreign_key="tournamententry.id")
+    entry_b_id: int | None = Field(default=None, foreign_key="tournamententry.id")
     phase: MatchPhase = MatchPhase.WAITING
-    winner_id: int | None = None
+    winner_id: int | None = Field(default=None, foreign_key="tournamententry.id")
     started_at: datetime | None = Field(default=None, sa_type=AwareDateTime)
     """When the match went live."""
     decided_at: datetime | None = Field(default=None, sa_type=AwareDateTime)
@@ -162,8 +165,8 @@ class MatchLineup(LifecycleModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(through=Through("match_id", TournamentMatch))
     anonymised: ClassVar[tuple[str, ...]] = ("user_id",)
 
-    match_id: int = Field(index=True)
-    entry_id: int = Field(index=True)
+    match_id: int = Field(foreign_key="tournamentmatch.id", index=True)
+    entry_id: int = Field(foreign_key="tournamententry.id", index=True)
     user_id: int = Field(sa_type=BigInteger)
 
 
@@ -173,7 +176,7 @@ class MatchEvent(LifecycleModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(through=Through("match_id", TournamentMatch))
     anonymised: ClassVar[tuple[str, ...]] = ("actor_id",)
 
-    match_id: int = Field(index=True)
+    match_id: int = Field(foreign_key="tournamentmatch.id", index=True)
     kind: MatchEventKind
     actor_id: int = Field(sa_type=BigInteger)
     at: datetime = Field(sa_type=AwareDateTime)
@@ -186,8 +189,8 @@ class LineupChange(LifecycleModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(through=Through("entry_id", TournamentEntry))
     anonymised: ClassVar[tuple[str, ...]] = ("user_id", "changed_by")
 
-    entry_id: int = Field(index=True)
-    match_id: int | None = None
+    entry_id: int = Field(foreign_key="tournamententry.id", index=True)
+    match_id: int | None = Field(default=None, foreign_key="tournamentmatch.id")
     """The match whose lineup changed; ``None`` when only the entry's current players did."""
     user_id: int = Field(sa_type=BigInteger)
     playing: bool
@@ -201,8 +204,8 @@ class DraftChoice(LifecycleModel, table=True):
 
     ownership: ClassVar[Ownership] = Ownership(through=Through("match_id", TournamentMatch))
 
-    match_id: int = Field(index=True)
-    entry_id: int
+    match_id: int = Field(foreign_key="tournamentmatch.id", index=True)
+    entry_id: int = Field(foreign_key="tournamententry.id")
     kind: DraftKind
     value: str
 
@@ -212,7 +215,7 @@ class MatchVote(LifecycleModel, table=True):
 
     ownership: ClassVar[Ownership] = Ownership(through=Through("match_id", TournamentMatch))
 
-    match_id: int = Field(index=True)
+    match_id: int = Field(foreign_key="tournamentmatch.id", index=True)
     question: str
     options: str
     """The answers to choose from, one per line."""
@@ -225,7 +228,7 @@ class MatchBallot(LifecycleModel, table=True):
     ownership: ClassVar[Ownership] = Ownership(member="user_id", through=Through("vote_id", MatchVote))
     natural_key: ClassVar[tuple[str, ...]] = ("vote_id", "user_id")
 
-    vote_id: int = Field(index=True)
+    vote_id: int = Field(foreign_key="matchvote.id", index=True)
     user_id: int = Field(sa_type=BigInteger)
     choice: int
     """The index of the chosen answer."""
