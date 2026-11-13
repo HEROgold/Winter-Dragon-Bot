@@ -604,8 +604,8 @@ Lists Steam sales on request and DMs subscribers new ones, re-checking sales rig
 - `@property throttle -> RequestThrottle` — The request throttle every scraper of this cog shares, so spacing and rate-limit pauses span them all.
 - `async load() -> None` — Create the Steam tables if missing; the bot then starts :meth:`scrape_and_recheck`.
 - `@Cog.periodic async scrape_and_recheck() -> float` — Scrape when due, re-check sales that just ended, and return the seconds until either is due next.
-- `async scrape(store: SteamSaleStore, now: datetime) -> None` — Ask Steam for its sales, store them, and DM subscribers new ones; the caller commits.
-- `async recheck_due(store: SteamSaleStore, now: datetime) -> None` — Check the sales whose announced end has passed: update those still running, remove those that ended.
+- `async scrape(now: datetime) -> None` — Ask Steam for its sales, store them, and DM subscribers new ones.
+- `async recheck_due(now: datetime) -> None` — Check the sales whose announced end has passed: update those still running, remove those that ended.
 - `@Cog.command async add(interaction: CommandInteraction) -> None` — Subscribe the invoking user to Steam sale DMs.
 - `@Cog.command async percentage(interaction: CommandInteraction, percent: int) -> None` — Set the minimum discount the invoking user is notified about, subscribing them when they aren't.
 - `@Cog.command async remove(interaction: CommandInteraction) -> None` — Unsubscribe the invoking user from Steam sale DMs.
@@ -655,7 +655,7 @@ DM subscribers the Steam sales they haven't been told about yet.
 ### `@dataclass class SteamSaleNotifier(LoggerMixin)`
 Sends each subscriber one DM with the sales above their threshold discovered since their last notification.
 
-- fields: client: Client, store: SteamSaleStore, color: int
+- fields: client: Client, engine: Engine, color: int
 - `async notify(*, now: datetime, content: str) -> int` — DM every subscriber with new sales, with ``content`` above the embed; return how many were notified.
 
 ## `winter_dragon.cogs.steam.pages` — `src/winter_dragon/cogs/steam/pages.py`
@@ -705,12 +705,20 @@ How often Steam is scraped, and how its sales are shown.
 ## `winter_dragon.cogs.steam.store` — `src/winter_dragon/cogs/steam/store.py`
 Storing and querying Steam sales and their subscribers.
 
+### `@dataclass class SaleRef`
+What a re-check needs to know of a stored sale, copied out so it outlives the session that read it.
+
+- fields: id: int, title: str, url: str
+- `@property steam_url -> SteamURL` — The sale's store page.
+- `@classmethod of_all(sales: Iterable[SteamSale]) -> list[SaleRef]` — Copy the sales that have an ID.
+
 ### `class SteamSaleStore(Repository[SteamSale], Scoped)`
 Reads and writes Steam sales through one database session; the caller commits.
 
 - `record(scraped: ScrapedSale, *, now: datetime, outdated_after: timedelta) -> tuple[SteamSale, bool]` — Store one scraped sale; see :meth:`record_many`.
 - `record_many(scraped: Iterable[ScrapedSale], *, now: datetime, outdated_after: timedelta) -> list[tuple[SteamSale, bool]]` — Store scraped sales, returning each stored row with whether it counts as new.
 - `refresh(rechecked: Iterable[tuple[SteamSale, ScrapedSale]], *, now: datetime) -> None` — Apply what Steam now says about each sale: its current discount, end and properties.
+- `in_ids(ids: Iterable[int]) -> dict[int, SteamSale]` — Return the alive sales among ``ids``, by ID, in one query.
 - `remove(sales: Iterable[SteamSale]) -> None` — Soft-delete ``sales`` and their properties, in two statements whatever their number.
 - `properties(sales: Iterable[SteamSale]) -> dict[int, set[SaleTypes]]` — Return the properties of each of ``sales`` that has any, by sale ID.
 - `current_sales(percent: int, *, now: datetime, outdated_after: timedelta) -> list[SteamSale]` — Return the sales of at least ``percent`` still running: biggest discount first, then cheapest.

@@ -63,7 +63,7 @@ async def test_subscriber_gets_new_sales_above_their_threshold(store: SteamSaleS
     user = _subscribe(store, 7, threshold=90)
     client = _client()
 
-    notified = await SteamSaleNotifier(client, store, color=0).notify(now=NOW, content="hi")
+    notified = await SteamSaleNotifier(client, store.session.get_bind(), color=0).notify(now=NOW, content="hi")
 
     assert notified == 1
     assert [sent.json for sent in client.requests_to("POST", OPEN_DM)] == [{"recipient_id": "7"}]
@@ -78,7 +78,7 @@ async def test_subscriber_already_notified_gets_nothing(store: SteamSaleStore) -
     _subscribe(store, 7, threshold=0, last_notification=NOW)
     client = _client()
 
-    assert await SteamSaleNotifier(client, store, color=0).notify(now=NOW, content="hi") == 0
+    assert await SteamSaleNotifier(client, store.session.get_bind(), color=0).notify(now=NOW, content="hi") == 0
 
     assert client.sent == []
 
@@ -89,7 +89,7 @@ async def test_a_soft_deleted_subscriber_gets_nothing(store: SteamSaleStore) -> 
     store.session.commit()
     client = _client()
 
-    assert await SteamSaleNotifier(client, store, color=0).notify(now=NOW, content="hi") == 0
+    assert await SteamSaleNotifier(client, store.session.get_bind(), color=0).notify(now=NOW, content="hi") == 0
 
     assert client.sent == []
 
@@ -99,7 +99,7 @@ async def test_failed_dm_keeps_the_sales_for_a_later_run(store: SteamSaleStore) 
     client = _client()
     client.fail("POST", SEND, ApiResponseError(code=50007, message="Cannot send messages to this user"))
 
-    assert await SteamSaleNotifier(client, store, color=0).notify(now=NOW, content="hi") == 0
+    assert await SteamSaleNotifier(client, store.session.get_bind(), color=0).notify(now=NOW, content="hi") == 0
 
     assert user.last_notification == EARLIER
 
@@ -111,7 +111,7 @@ def _logged(store: SteamSaleStore) -> list[SaleNotification]:
 async def test_a_delivered_dm_logs_each_sale_with_its_discount_and_threshold(store: SteamSaleStore) -> None:
     _subscribe(store, 7, threshold=50)
 
-    await SteamSaleNotifier(_client(), store, color=0).notify(now=NOW, content="hi")
+    await SteamSaleNotifier(_client(), store.session.get_bind(), color=0).notify(now=NOW, content="hi")
 
     logged = [(n.user_id, n.sale_id, n.title, n.sale_percent, n.sale_threshold, n.sent_at) for n in _logged(store)]
     assert logged == [(7, 1, "Game 1", 100, 50, NOW), (7, 2, "Game 2", 60, 50, NOW)]
@@ -122,14 +122,14 @@ async def test_a_failed_dm_logs_nothing(store: SteamSaleStore) -> None:
     client = _client()
     client.fail("POST", SEND, ApiResponseError(code=50007, message="Cannot send messages to this user"))
 
-    await SteamSaleNotifier(client, store, color=0).notify(now=NOW, content="hi")
+    await SteamSaleNotifier(client, store.session.get_bind(), color=0).notify(now=NOW, content="hi")
 
     assert _logged(store) == []
 
 
 async def test_changing_the_threshold_later_keeps_the_logged_threshold(store: SteamSaleStore) -> None:
     user = _subscribe(store, 7, threshold=90)
-    await SteamSaleNotifier(_client(), store, color=0).notify(now=NOW, content="hi")
+    await SteamSaleNotifier(_client(), store.session.get_bind(), color=0).notify(now=NOW, content="hi")
 
     user.sale_threshold = 10
     store.session.add(user)
