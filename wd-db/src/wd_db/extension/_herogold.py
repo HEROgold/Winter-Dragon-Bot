@@ -16,7 +16,11 @@ HEROGOLD_CONFIG_FILE = Path("db_config.ini")
 DbConfig.write_on_edit = False
 DbConfig._watcher = OptionalFileWatcher(HEROGOLD_CONFIG_FILE)  # noqa: SLF001 - confkit has no public way to swap the watcher
 
-from herogold.orm.core.model import BaseModel  # noqa: E402 - only once DbConfig won't write
+from herogold.orm.core.configure import configure  # noqa: E402 - only once DbConfig won't write
+from herogold.orm.core.model import BaseModel  # noqa: E402
+from herogold.orm.core.utils import Relationship  # noqa: E402
+from herogold.orm.repository import Repository  # noqa: E402
+from herogold.orm.scopes import Scoped  # noqa: E402
 
 
-__all__ = ["BaseModel"]
+__all__ = ["BaseModel", "Relationship", "Repository", "Scoped", "configure"]
