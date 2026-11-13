@@ -897,14 +897,14 @@ What can happen to a team: creating it, keeping a temporary one, listing its mem
 - `end_expired(session: Session, now: datetime, lifetime: timedelta) -> int` — End every alive temporary team, except a solo tournament's, made at or before ``now - lifetime``; return how many.
 - `end_team(session: Session, team: Team, now: datetime) -> None` — End the temporary ``team`` at ``now``; a lasting or already ended team stays as it is.
 - `members_of(session: Session, team: Team) -> Generator[TeamMember]` — Yield the team's members, longest-standing first.
-- `teams_of(session: Session, user_id: Snowflake) -> Generator[Team]` — Yield the alive, unended teams ``user_id`` is a member of, by name.
+- `teams_of(session: Session, user_id: Snowflake) -> Generator[Team]` — Yield the alive, unended teams ``user_id`` is a member of, by name, in one statement.
 - `membership(session: Session, team: Team, user_id: Snowflake) -> TeamMember | None` — Return ``user_id``'s alive membership of ``team``, if they're in it.
 - `leave(session: Session, team: Team, user_id: Snowflake) -> None` — Take ``user_id`` out of ``team``.
 - `require_captain(team: Team, user_id: Snowflake) -> None` — Refuse unless ``user_id`` captains ``team``.
-- `join(session: Session, team: Team, user_id: Snowflake) -> None` — Add ``user_id`` to ``team``, joining now; refuse when they're in it already.
+- `join(session: Session, team: Team, user_id: Snowflake) -> None` — Add ``user_id`` to ``team``, joining now, or bring back the membership they left; refuse when they're in it.
 - `kick(session: Session, team: Team, captain_id: Snowflake, user_id: Snowflake) -> None` — Take ``user_id`` out of ``team`` for its captain; the captain can't kick themselves.
 - `hand_over(session: Session, team: Team, captain_id: Snowflake, user_id: Snowflake) -> None` — Make the member ``user_id`` captain of ``team``, for its captain.
-- `disband(session: Session, team: Team, captain_id: Snowflake) -> None` — Disband ``team`` for its captain: soft-delete it and every membership.
+- `disband(session: Session, team: Team, captain_id: Snowflake) -> None` — Disband ``team`` for its captain: soft-delete it and every membership, in two statements.
 
 ### `class LeaveHiddenMember(MemberHiddenHook)`
 A member whose data is hidden leaves each of their teams, by the rule ``/team leave`` follows.

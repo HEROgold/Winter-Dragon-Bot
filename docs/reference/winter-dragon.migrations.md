@@ -131,3 +131,10 @@ add the bot stats snapshot table.
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_13_5d5d11426f46_team_foreign_keys` — `src/winter_dragon/migrations/versions/2026_11_13_5d5d11426f46_team_foreign_keys.py`
+team foreign keys.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.

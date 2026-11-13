@@ -10,7 +10,7 @@ from datetime import datetime
 lazy from typing import TYPE_CHECKING, Any, ClassVar, SupportsInt, override
 
 from sqlalchemy import BigInteger
-from sqlmodel import Field
+from sqlmodel import Field, SQLModel
 from wd_types.clock import utc_now
 lazy from sqlalchemy import Column, Engine, Index, and_, false, inspect, text, update
 lazy from sqlalchemy.orm import declared_attr
@@ -31,6 +31,10 @@ if TYPE_CHECKING:
 
 LIFECYCLE_COLUMNS = ("created_at", "updated_at", "deleted_at")
 """The columns every lifecycle table carries, in the order :func:`ensure_lifecycle_columns` adds them."""
+
+SQLModel.metadata.naming_convention = {"ix": "ix_%(column_0_label)s", "fk": "fk_%(table_name)s_%(column_0_name)s"}
+"""Names foreign keys ``fk_<table>_<column>``. Without a name, Alembic autogenerates ``drop_constraint(None, ...)``, which
+fails on downgrade. The ``ix`` entry is SQLAlchemy's default, kept because setting this replaces the defaults."""
 
 
 @dataclass(frozen=True)

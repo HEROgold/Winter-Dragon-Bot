@@ -5,6 +5,7 @@ from random import Random
 from typing import TYPE_CHECKING
 
 import pytest
+from sqlalchemy import event
 from sqlmodel import Session
 from wd_bot.commands import Lookup
 from wd_bot.testing import detached_cog
@@ -22,6 +23,8 @@ from winter_dragon.cogs.team.split import split_into, split_into_teams
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from conftest import ComponentInteractionFactory, InteractionFactory, ModalSubmitFactory
     from sqlalchemy import Engine
     from wd_discord.testing import RecordingClient
@@ -582,3 +585,72 @@ async def test_the_tick_ends_a_temporary_team_created_two_days_ago(engine: Engin
     await _cog(engine, discord_client).end_expired_teams()
 
     assert _team_row(engine, team_id).ended_at is not None
+
+
+def _statements(session: Session, work: Callable[[], object]) -> int:
+    """Count the SQL statements, inserts aside, ``work`` sends through ``session``; the session is flushed after."""
+    count = 0
+
+    def counted(*args: object) -> None:
+        nonlocal count
+        if not str(args[2]).startswith("INSERT"):  # one row each on sqlite; Postgres batches them
+            count += 1
+
+    bind = session.get_bind()
+    event.listen(bind, "before_cursor_execute", counted)
+    try:
+        work()
+        session.flush()
+    finally:
+        event.remove(bind, "before_cursor_execute", counted)
+    return count
+
+
+def test_creating_temporary_teams_takes_the_same_queries_for_any_number_of_groups(engine: Engine) -> None:
+    def run(groups: int, size: int) -> int:
+        members = [[Snowflake(group * 100 + offset) for offset in range(size)] for group in range(groups)]
+        with Session(engine) as session:
+            return _statements(session, lambda: service.create_temporary_teams(session, members, TeamOrigin.TEXT_SPLIT))
+
+    assert run(2, 2) == run(20, 5)
+
+
+def test_disbanding_takes_the_same_queries_for_any_number_of_members(engine: Engine) -> None:
+    def run(members: int) -> int:
+        team_id = _seed(engine, INVOKER, *[(1000 + offset, offset + 1) for offset in range(members)])
+        with Session(engine) as session:
+            team = session.get(Team, team_id)
+            assert team is not None
+            count = _statements(session, lambda: service.disband(session, team, Snowflake(INVOKER)))
+            session.commit()
+            return count
+
+    assert run(1) == run(20) == 2  # one UPDATE for the memberships, one for the team
+    with Session(engine) as session:
+        assert session.exec(alive(TeamMember)).all() == []
+
+
+def test_ending_expired_teams_takes_the_same_queries_for_any_number_of_teams(engine: Engine) -> None:
+    now = utc_now() + timedelta(days=5)
+
+    def run(teams: int) -> int:
+        with Session(engine) as session:
+            service.create_temporary_teams(session, [[Snowflake(offset)] for offset in range(teams)], TeamOrigin.TEXT_SPLIT)
+            session.commit()
+            count = _statements(session, lambda: service.end_expired(session, now, timedelta(days=1)))
+            session.commit()
+            return count
+
+    assert run(1) == run(20) == 1  # one UPDATE, with no query first
+    with Session(engine) as session:
+        assert session.exec(alive(Team).where(Team.ended_at.is_(None))).all() == []  # ty: ignore[unresolved-attribute]
+
+
+def test_listing_a_users_teams_takes_one_query_for_any_number_of_teams(engine: Engine) -> None:
+    def run(teams: int, user: int) -> int:
+        for number in range(teams):
+            _seed(engine, user, name=f"Crew {user}-{number}")
+        with Session(engine) as session:
+            return _statements(session, lambda: list(service.teams_of(session, Snowflake(user))))
+
+    assert run(1, 71) == run(20, 72) == 1
