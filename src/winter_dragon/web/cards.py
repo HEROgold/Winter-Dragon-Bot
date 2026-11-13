@@ -236,4 +236,4 @@ async def _may_see(opened: Opened, viewer: Snowflake, guild_id: Snowflake, chann
         member_roles=list(member.entity.model.roles),
         role_permissions={role.id: role.permissions for role in roles.entity},
     )
-    return can_view_channel(who, [overwrite.model for overwrite in channel.overwrites])  # type: ignore[attr-defined] - a Channel
+    return can_view_channel(who, [overwrite.model for overwrite in channel.overwrites])  # type: ignore[attr-defined]  # ty: ignore[unresolved-attribute] - a Channel
