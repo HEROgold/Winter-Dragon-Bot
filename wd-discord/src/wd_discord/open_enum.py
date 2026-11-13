@@ -12,9 +12,6 @@ from __future__ import annotations
 from enum import IntEnum, StrEnum
 lazy from typing import Self, cast, override
 
-lazy import sentry_sdk
-lazy from wd_config.sentry import SentrySettings
-
 lazy from wd_discord.log import get_logger
 
 
@@ -54,14 +51,8 @@ class OpenStrEnum(StrEnum):
 
 
 def _report(enum: str, value: object) -> None:
-    """Log an unknown value once per process, and send it to Sentry when telemetry is on."""
+    """Log an unknown value once per process. Sentry gets it as a log, not an error event."""
     if (enum, value) in _reported:
         return
     _reported.add((enum, value))
     get_logger("DiscordModel").warning(t"unknown value of {enum}: {value!r}")
-    if SentrySettings.Telemetry:
-        sentry_sdk.capture_message(
-            f"wd-discord: unknown value of {enum}: {value!r}",
-            level="warning",
-            fingerprint=["wd-discord-unknown-enum-value", enum, repr(value)],
-        )

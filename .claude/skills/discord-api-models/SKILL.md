@@ -23,12 +23,9 @@ class DiscordModel(BaseModel):
 
 `extra="allow"` (not `ignore`/`forbid`): a transport layer must survive Discord shipping new
 keys, but must not silently drop them. A `model_validator(mode="after")` on the base sends any
-`model_extra` to Sentry via `_report_unknown_fields`, gated by `SentrySettings.Telemetry`
-([wd-config](../../../wd-config/src/wd_config/sentry.py)). The reporter is best-effort — wrapped
-in `try/except` so telemetry never turns a successful parse into a failure. `sentry_sdk.capture_message`
-is a no-op until `sentry_sdk.init` runs, so this is safe outside the bot runtime. Reading the
-Config flag is layering-clean (wd-discord already depends on wd-config); `sentry-sdk` is a direct
-wd-discord dependency.
+`model_extra` to `_report_unknown_fields`, which logs a warning once per model and field set. The
+logging integration forwards that warning to Sentry as a log, not an error event, so unknown fields
+never use the error quota. Don't call `sentry_sdk.capture_message` or `capture_exception` for them.
 
 ## Value types are pydantic-aware, never bare primitives
 
