@@ -1166,6 +1166,7 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `signup_of(session: Session, tournament: Tournament, user_id: Snowflake) -> TournamentSignup | None` — Return the user's solo sign-up for the tournament, if any.
 - `entries_of(session: Session, tournament: Tournament) -> list[TournamentEntry]` — Return the tournament's teams, in the order they were formed.
 - `roster(session: Session, entry: TournamentEntry) -> list[Snowflake]` — Return the user IDs of the entry's players.
+- `rosters_of(session: Session, entries: Iterable[TournamentEntry]) -> dict[int, list[Snowflake]]` — Return the user IDs of each entry's players, by entry ID, in one query whatever the number of entries.
 - `matches_of(session: Session, tournament: Tournament) -> list[TournamentMatch]` — Return the tournament's matches, round by round, top to bottom.
 - `record_event(session: Session, match: TournamentMatch, kind: MatchEventKind, actor_id: Snowflake, detail: str='') -> None` — Record that ``actor_id`` did ``kind`` in ``match`` now, with a short ``detail``.
 - `match_log(session: Session, match: TournamentMatch) -> list[MatchEvent | LineupChange]` — Return what happened in ``match``: its events, and the lineup changes made for it, oldest first.
