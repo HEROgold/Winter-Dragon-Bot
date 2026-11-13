@@ -178,7 +178,7 @@ class DiscordLookup:
         key = (kind, entity_id, guild_id)
         now = self._now()
         if (kept := self._kept.get(key)) is not None and kept[0] > now:
-            return kept[1]  # pyrefly: ignore[bad-return] - the key's kind decides the entity's type
+            return kept[1]  # pyrefly: ignore[bad-return]  # ty: ignore[invalid-return-type] - the key's kind decides the entity's type
         result = await fetch()
         if is_network_error(result):
             outcome: Fetched[T] = Fetched.failed(result)
@@ -187,5 +187,5 @@ class DiscordLookup:
         else:
             outcome = Fetched(LookupStatus.FOUND, result)
         if outcome.status is not LookupStatus.UNAVAILABLE:
-            self._kept[key] = (now + self._lifetime, outcome)
+            self._kept[key] = (now + self._lifetime, outcome)  # ty: ignore[invalid-assignment] - the key's kind decides the type
         return outcome

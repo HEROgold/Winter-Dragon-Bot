@@ -20,7 +20,7 @@ lazy from winter_dragon.web.shared_guilds import SharedGuilds
 
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncGenerator
 
     from sqlalchemy import Engine
     from starlette.requests import Request
@@ -49,7 +49,7 @@ def create_app(
     create_dashboard_tables(bind)
 
     @asynccontextmanager
-    async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    async def lifespan(_: FastAPI) -> AsyncGenerator[None]:
         if lookup is None:
             yield
             return

@@ -42,7 +42,7 @@ def _stub_wd_db_engine() -> None:
     """Install a sqlite-backed wd_db.constants stub before anything imports the real one."""
     # Instead update DbUrl from wd_db.db to point to a local sqlite database.
     stub = types.ModuleType("wd_db.constants")
-    stub.engine = create_engine("sqlite://")
+    stub.engine = create_engine("sqlite://")  # ty: ignore[unresolved-attribute] - a fresh ModuleType
     sys.modules["wd_db.constants"] = stub
 
 
