@@ -152,7 +152,8 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
     async def _recheck(self, scraper: SteamScraper, store: SteamSaleStore, sales: Iterable[SteamSale], now: datetime) -> None:
         """Check ``sales`` on Steam: update those still running, remove those that ended, retry later on failure."""
         by_item = {item: sale for sale in sales if (item := sale.steam_url.store_item) is not None}
-        stored = store.property_rows(sale.id for sale in by_item.values())
+        refreshed: list[tuple[SteamSale, ScrapedSale]] = []
+        ended: list[SteamSale] = []
         async for item, details in scraper.get_sales(by_item):
             sale = by_item[item]
             if sale.id is None:
@@ -161,10 +162,12 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
                 case ScrapeFailure():
                     self.logger.warning(t"Could not re-check {sale.url}; trying again later")
                 case ScrapedSale():
-                    store.refresh(sale, details, now=now, stored=stored[sale.id])
+                    refreshed.append((sale, details))
                 case None:
                     self.logger.info(t"Steam sale ended: {sale.title}")
-                    store.remove(sale, stored[sale.id])
+                    ended.append(sale)
+        store.refresh(refreshed, now=now)
+        store.remove(ended)
 
     def _notification_content(self) -> str:
         """Return the text above a sale DM, pointing at the commands to stop notifications and see every sale."""

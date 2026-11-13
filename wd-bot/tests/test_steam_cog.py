@@ -382,7 +382,7 @@ def test_dlc_property_is_kept_on_refresh(engine: Engine) -> None:
             final_price=0.0,
             properties=frozenset({SaleTypes.DLC}),
         )
-        store.refresh(sale, dlc, now=NOW, stored=store.property_rows([sale.id])[sale.id])
+        store.refresh([(sale, dlc)], now=NOW)
         assert store.properties([sale]) == {1: {SaleTypes.DLC}}
 
 

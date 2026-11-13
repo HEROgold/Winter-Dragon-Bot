@@ -120,25 +120,25 @@ def test_no_recheck_without_known_ends(store: SteamSaleStore) -> None:
 
 def test_refresh_drops_an_end_that_already_passed(store: SteamSaleStore) -> None:
     sale, _ = store.record(scraped(sale_end=NOW), now=NOW, outdated_after=OUTDATED)
-    store.refresh(sale, scraped(percent=80, sale_end=NOW), now=NOW + DELAY, stored={})
+    store.refresh([(sale, scraped(percent=80, sale_end=NOW))], now=NOW + DELAY)
     assert sale.sale_end is None
     assert sale.sale_percent == 80
 
     future = NOW + timedelta(days=1)
-    store.refresh(sale, scraped(sale_end=future), now=NOW + DELAY, stored={})
+    store.refresh([(sale, scraped(sale_end=future))], now=NOW + DELAY)
     assert sale.sale_end == future
 
 
 def test_remove_deletes_the_sale_and_its_properties(store: SteamSaleStore) -> None:
     sale, _ = store.record(scraped(properties=frozenset({SaleTypes.DLC})), now=NOW, outdated_after=OUTDATED)
-    store.remove(sale, store.property_rows([sale.id])[sale.id])
+    store.remove([sale])
     assert store.session.exec(alive(SteamSale)).all() == []
     assert store.session.exec(alive(SteamSaleProperties)).all() == []
 
 
 def test_a_removed_sale_found_again_is_stored_alive_and_new(store: SteamSaleStore) -> None:
     sale, _ = store.record(scraped(properties=frozenset({SaleTypes.DLC})), now=NOW, outdated_after=OUTDATED)
-    store.remove(sale, store.property_rows([sale.id])[sale.id])
+    store.remove([sale])
     later = NOW + timedelta(hours=1)
 
     sale, is_new = store.record(scraped(percent=90), now=later, outdated_after=OUTDATED)
@@ -207,12 +207,35 @@ def test_recording_and_rechecking_take_the_same_queries_for_any_number_of_sales(
 
         def work() -> None:
             sales = [sale for sale, _ in store.record_many(batch, now=NOW, outdated_after=OUTDATED)]
-            stored = store.property_rows(sale.id for sale in sales)
-            for sale, details in zip(sales, batch, strict=True):
-                store.refresh(sale, details, now=NOW, stored=stored[sale.id])
+            store.refresh(zip(sales, batch, strict=True), now=NOW)
             store.session.commit()
 
         return _statements(store, work)
 
     store.record_many([scraped(1000)], now=NOW, outdated_after=OUTDATED)  # known sales don't change the count
     assert run(1, 2) == run(100, 20)
+
+
+def test_removing_sales_takes_the_same_queries_for_any_number_of_them(store: SteamSaleStore) -> None:
+    def run(first: int, size: int) -> int:
+        batch = [scraped(first + offset, properties=frozenset({SaleTypes.DLC})) for offset in range(size)]
+        sales = [sale for sale, _ in store.record_many(batch, now=NOW, outdated_after=OUTDATED)]
+        return _statements(store, lambda: store.remove(sales))
+
+    assert run(1, 1) == run(100, 50)
+    assert store.qs().count() == 0
+    assert store.session.exec(alive(SteamSaleProperties)).all() == []
+
+
+def test_reading_properties_takes_the_same_queries_for_any_number_of_sales(store: SteamSaleStore) -> None:
+    def run(first: int, size: int) -> int:
+        batch = [scraped(first + offset, properties=frozenset({SaleTypes.DLC})) for offset in range(size)]
+        store.record_many(batch, now=NOW, outdated_after=OUTDATED)
+        store.session.commit()
+        sales = [sale for sale in store.current_sales(0, now=NOW, outdated_after=OUTDATED) if first <= sale.id < first + size]
+        found: dict[int, set[SaleTypes]] = {}
+        count = _statements(store, lambda: found.update(store.properties(sales)))
+        assert len(found) == size
+        return count
+
+    assert run(1, 1) == run(100, 50)
