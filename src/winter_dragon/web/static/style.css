@@ -211,6 +211,26 @@ textarea.input { resize: vertical; min-height: 6rem; }
 .page-title:has(+ .page-lead) { margin-bottom: 0.75rem; }
 .page-lead { font-size: var(--step-1); line-height: 1.4; color: var(--slate); max-width: 36rem; margin-bottom: 2rem; }
 
+/* Privacy policy and terms of service: long text, so a reading width. */
+
+.legal > :not(.page-title) { max-width: 42rem; }
+.legal h2 { margin: 2.25rem 0 0.5rem; }
+.legal ul { padding-inline-start: 1.25rem; }
+.legal li + li { margin-top: 0.35rem; }
+.terms { display: grid; grid-template-columns: minmax(8rem, max-content) 1fr; gap: 0.4rem 1.25rem; }
+.terms dt { font-weight: 600; }
+.terms dd { margin: 0; }
+
+.site-footer {
+  padding: 1.5rem clamp(1rem, 4vw, 3rem) 2rem;
+  border-top: 1px solid var(--line);
+  color: var(--slate);
+  font-size: 0.85rem;
+}
+.site-footer nav { display: flex; gap: 1.5rem; margin-bottom: 0.5rem; }
+.site-footer a { color: var(--granite); }
+.riot-notice { max-width: 48rem; margin: 0; }
+
 .panel {
   background: var(--paper);
   border: 1px solid var(--line);

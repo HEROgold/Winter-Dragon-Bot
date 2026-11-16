@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of service · {% endblock %}
+
+{% block main %}
+<main class="page legal" id="main">
+  <h1 class="page-title">Terms of service</h1>
+  <p class="page-lead">These terms cover Winter Dragon: the Discord bot and this dashboard. Last changed {{ updated }}.</p>
+
+  <h2>Terms used</h2>
+  <dl class="terms">
+    <dt>Winter Dragon</dt><dd>The Discord bot and this dashboard together.</dd>
+    <dt>Operator</dt><dd>HEROgold, the one person who runs Winter Dragon.</dd>
+    <dt>Dashboard</dt><dd>This website, where you sign in with Discord to see and manage your data.</dd>
+    <dt>Discord server</dt><dd>A community on Discord that the bot has been added to. Discord's own documentation calls it a "guild".</dd>
+    <dt>Your data</dt><dd>What Winter Dragon stores because you used a feature, such as your reminders. The <a href="/privacy">privacy policy</a> lists it in full.</dd>
+    <dt>Linked Riot account</dt><dd>A Riot Games account you proved is yours and connected to your Discord account on the dashboard.</dd>
+    <dt>As is</dt><dd>Offered in its current state, without any promise that it works, stays available or fits a purpose.</dd>
+    <dt>Liable</dt><dd>Legally responsible for paying for damage or loss.</dd>
+  </dl>
+
+  <h2>Operator</h2>
+  <p>Winter Dragon is a free hobby project run by one person, HEROgold, in the Netherlands. It isn't a company or a paid service.</p>
+  <p>Contact the operator first about any problem: <a href="mailto:{{ email }}">{{ email }}</a>, the support server (<code>/invite guild</code>), or <a href="{{ issues_url }}">GitHub issues</a> for anything public.</p>
+
+  <h2>Use</h2>
+  <ul>
+    <li>Adding the bot to a server, using its commands or using this dashboard means you accept these terms and the <a href="/privacy">privacy policy</a>.</li>
+    <li>Discord's terms of service and community guidelines apply. For League of Legends features, Riot Games' terms apply too.</li>
+    <li>Don't use Winter Dragon to harass people, spam, break the law, or break Discord's or Riot's rules.</li>
+    <li>Don't overload Winter Dragon, attack the server it runs on, or work around its limits. Report security problems by email.</li>
+    <li>Only link Riot accounts you own.</li>
+  </ul>
+
+  <h2>No guarantees</h2>
+  <ul>
+    <li>Winter Dragon is provided as is, for free. It can have bugs, go down, lose data or change.</li>
+    <li>Any feature, or Winter Dragon as a whole, can be changed, limited or stopped at any time.</li>
+    <li>Users or servers that break these terms can be blocked.</li>
+    <li>As far as Dutch law allows, the operator isn't liable for damage or loss from using Winter Dragon.</li>
+  </ul>
+
+  <h2>Your data</h2>
+  <p>What you store with Winter Dragon stays yours. You allow Winter Dragon to store and show it as long as the features you use need it. <a href="/me">Your data</a> lists and deletes it.</p>
+
+  <h2>Law</h2>
+  <p>Dutch law applies.</p>
+</main>
+{% endblock %}

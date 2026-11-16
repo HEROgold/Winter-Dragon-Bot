@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy policy · {% endblock %}
+
+{% block main %}
+<main class="page legal" id="main">
+  <h1 class="page-title">Privacy policy</h1>
+  <p class="page-lead">This policy covers Winter Dragon: the Discord bot and this dashboard. Last changed {{ updated }}.</p>
+
+  <h2>Terms used in this policy</h2>
+  <dl class="terms">
+    <dt>Winter Dragon</dt><dd>The Discord bot and this dashboard together.</dd>
+    <dt>Operator</dt><dd>HEROgold, the one person who runs Winter Dragon and decides what data it processes. Under the GDPR this is the "controller".</dd>
+    <dt>Dashboard</dt><dd>This website, where you sign in with Discord to see and manage your data.</dd>
+    <dt>Discord server</dt><dd>A community on Discord that the bot has been added to. Discord's own documentation calls it a "guild".</dd>
+    <dt>Discord ID</dt><dd>The number Discord gives every user, server, channel and message. Your Discord user ID identifies your Discord account.</dd>
+    <dt>Your data</dt><dd>Rows Winter Dragon stores because you used a feature. Each one holds your Discord user ID.</dd>
+    <dt>Server data</dt><dd>Rows a Discord server's admins created, such as its settings. Server data belongs to the server, not to one member.</dd>
+    <dt>Command usage</dt><dd>A count, per day, of how often a user ran each command in each Discord server.</dd>
+    <dt>Linked Riot account</dt><dd>A Riot Games account you proved is yours and connected to your Discord user ID on the dashboard.</dd>
+    <dt>Riot Sign On</dt><dd>Riot's own login page. After you sign in there, Riot tells Winter Dragon which account you signed in with. Winter Dragon never sees your Riot password.</dd>
+    <dt>Riot ID</dt><dd>Your name and tag in League of Legends, such as <code>Name#EUW</code>. You can change it.</dd>
+    <dt>PUUID</dt><dd>Riot's permanent ID for an account. It doesn't change when the Riot ID changes.</dd>
+    <dt>Region</dt><dd>The Riot server an account plays on, such as EUW (Europe West).</dd>
+    <dt>Clash</dt><dd>Riot's weekend team tournaments in League of Legends.</dd>
+    <dt>Ranked 5s, Flex, Solo/Duo</dt><dd>League of Legends' ranked queues: five-player premade teams, groups of any size, and one or two players.</dd>
+    <dt>Pair result</dt><dd>For two linked members: how many games they played on the same team, and how many of those they won.</dd>
+    <dt>Collection</dt><dd>Winter Dragon fetching data about a linked Riot account from Riot.</dd>
+    <dt>Hidden</dt><dd>The first stage of deleting. Hidden data isn't shown or used anywhere, but can still be restored.</dd>
+    <dt>Purged</dt><dd>Removed from the database permanently. Purged data can't be restored.</dd>
+    <dt>Error report</dt><dd>A message Winter Dragon sends to Sentry when something fails: what failed, where in the code, and the request or command it was handling.</dd>
+    <dt>Performance trace</dt><dd>A record of how long a command or page took, step by step.</dd>
+    <dt>Log message</dt><dd>A line of text Winter Dragon writes about what it's doing, such as "sent reminder 12".</dd>
+    <dt>IP address</dt><dd>The network address of your device or connection when you open the dashboard.</dd>
+    <dt>Request headers</dt><dd>Details your browser sends with every page request, such as its version, language and cookies.</dd>
+    <dt>Cookie</dt><dd>A small piece of data the dashboard stores in your browser and your browser sends back on each request.</dd>
+    <dt>Backup</dt><dd>A copy of the whole database, kept to restore it after a failure.</dd>
+    <dt>Legal basis</dt><dd>The reason the GDPR accepts for processing data: needed for a service you use, your consent, or a legitimate interest.</dd>
+  </dl>
+
+  <h2>Operator</h2>
+  <p>Winter Dragon is a hobby project run by one person, HEROgold, in the Netherlands. The General Data Protection Regulation (GDPR, Dutch: AVG) applies.</p>
+  <p>Contact the operator first about any problem: <a href="mailto:{{ email }}">{{ email }}</a>, the support server (<code>/invite guild</code>), or <a href="{{ issues_url }}">GitHub issues</a> for anything public.</p>
+
+  <h2>Data Winter Dragon stores</h2>
+  <ul>
+    <li><strong>Your data:</strong> what you create with a command, in any Discord server. Examples: reminders, refuels, Steam sale alerts, voice channel settings, teams, tournament sign-ups and game progress. Each row holds your Discord user ID.</li>
+    <li><strong>Server data:</strong> what a server's admins set up, such as channels, welcome messages, roles and tournaments. It belongs to the server.</li>
+    <li><strong>Command usage:</strong> per day, how often you used each command in each server.</li>
+    <li><strong>Discord IDs</strong> of the users, servers, channels and messages that a stored row refers to.</li>
+  </ul>
+  <p>Winter Dragon doesn't store message content or presence. <a href="/me">Your data</a> lists every row stored about you.</p>
+
+  <h2>Riot accounts</h2>
+  <p>League of Legends features need a linked Riot account. You link it on this dashboard, with Riot Sign On or with the Riot connection on your Discord profile. Linking an account is consent to collecting this data about it:</p>
+  <ul>
+    <li>Riot ID, PUUID and region;</li>
+    <li>official ranks;</li>
+    <li>Clash teams and games, then Ranked 5s, Flex and Solo/Duo games;</li>
+    <li>per pair of linked members: games played together and games won.</li>
+  </ul>
+  <p>Winter Dragon stores the Riot ID, PUUID, region and pair results. It fetches games from Riot when needed and doesn't store them. On Your data you can switch collection off, delete collected data, or unlink the account. Deleting data doesn't switch collection off. Linking requires age 16 or older, or consent from a parent or guardian.</p>
+
+  <h2>Dashboard sign-in and cookies</h2>
+  <p>Sign-in uses Discord. Winter Dragon reads your Discord user ID, user name, avatar and server list, then revokes the Discord token. No Discord token is stored. The list of servers you share with the bot is kept in memory for 15 minutes.</p>
+  <p>Cookies: a signed session cookie (up to 14 days) and a time zone cookie. No tracking or advertising cookies.</p>
+
+  <h2>Legal basis</h2>
+  <ul>
+    <li>Your data and server data: needed to provide the features you use (GDPR article 6(1)(b)).</li>
+    <li>Riot account data: consent, given by linking (article 6(1)(a)). Unlinking withdraws it.</li>
+    <li>Error reports and backups: legitimate interest in keeping Winter Dragon working (article 6(1)(f)).</li>
+  </ul>
+
+  <h2>Data sent to other parties</h2>
+  <table class="table">
+    <thead><tr><th>Party</th><th>Data</th><th>Purpose</th><th>Location</th></tr></thead>
+    <tbody>
+      <tr><td>Hetzner</td><td>All stored data, database backups and log files</td><td>Server hosting</td><td>Helsinki, Finland</td></tr>
+      <tr><td>Discord</td><td>Command replies and posts, which can contain your data</td><td>Running the bot</td><td>Discord's privacy policy applies</td></tr>
+      <tr><td>Riot Games</td><td>PUUID and region of linked accounts</td><td>Fetching Riot account data</td><td>Riot's privacy policy applies</td></tr>
+      <tr><td>Sentry</td><td>Error reports, performance traces and log messages. These can contain your Discord user ID and server ID. For dashboard requests also your IP address, request headers and cookies.</td><td>Finding and fixing errors</td><td>Germany (EU)</td></tr>
+      <tr><td>Google Fonts</td><td>Your IP address and browser details, when a dashboard page loads</td><td>Serving the dashboard's font</td><td>Google's privacy policy applies</td></tr>
+    </tbody>
+  </table>
+  <p>No data is sold or used for advertising.</p>
+
+  <h2>Retention</h2>
+  <ul>
+    <li>Your data is kept until you delete it or the feature no longer needs it.</li>
+    <li>Deleted data is hidden at once and purged {{ retention_days }} days later, or at once if you choose that. Hidden data is only used to restore it at your request.</li>
+    <li>Where your data is part of another member's history, such as a tournament match, your user ID is removed instead.</li>
+    <li>Server data is purged {{ retention_days }} days after a server removes the bot, unless the bot is added back before then.</li>
+    <li>Command usage is purged after {{ usage_months }} months.</li>
+    <li>A backup is made before every update of Winter Dragon and stored on the same server. The newest {{ backups_kept }} backups are kept and older ones are deleted, so purged data stays in backups until {{ backups_kept }} newer backups exist.</li>
+  </ul>
+
+  <h2>Your rights</h2>
+  <p>You can access, correct, delete and export your data, object to its use, and withdraw consent. <a href="/me">Your data</a> handles viewing and deleting. For other requests, email <a href="mailto:{{ email }}">{{ email }}</a>.</p>
+  <p>You can lodge a complaint with the Dutch data protection authority, the <a href="https://autoriteitpersoonsgegevens.nl">Autoriteit Persoonsgegevens</a>.</p>
+</main>
+{% endblock %}

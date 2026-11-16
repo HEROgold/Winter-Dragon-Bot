@@ -155,6 +155,49 @@ def test_the_signpost_says_what_a_member_will_find(client: TestClient, bind: Eng
     assert "2 entries" in page
 
 
+RIOT_NOTICE = (
+    "Winter Dragon isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone "
+    "officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are "
+    "trademarks or registered trademarks of Riot Games, Inc."
+)
+
+
+@pytest.mark.parametrize(("path", "heading"), [("/privacy", "Privacy policy"), ("/tos", "Terms of service")])
+def test_the_legal_pages_open_without_signing_in(client: TestClient, path: str, heading: str) -> None:
+    page = client.get(path)
+
+    assert page.status_code == 200
+    assert f'<h1 class="page-title">{heading}</h1>' in page.text
+    assert "mailto:privacy@herogold.nl" in page.text
+    assert "github.com/HEROgold/Winter-Dragon-Bot/issues" in page.text
+
+
+def test_the_privacy_policy_names_who_runs_the_bot_and_who_else_sees_the_data(client: TestClient) -> None:
+    text = html.unescape(client.get("/privacy").text)
+
+    assert "run by one person, HEROgold, in the Netherlands" in text
+    for party in ("<td>Hetzner</td>", "<td>Discord</td>", "<td>Riot Games</td>", "<td>Sentry</td>", "<td>Google Fonts</td>"):
+        assert party in text
+    assert "purged 30 days later" in text
+    assert "Linking an account is consent" in text
+    assert "lodge a complaint" in text
+    assert "Autoriteit Persoonsgegevens" in text
+
+
+@pytest.mark.parametrize(("path", "term"), [("/privacy", "PUUID"), ("/privacy", "Purged"), ("/tos", "As is")])
+def test_the_legal_pages_explain_their_terms(client: TestClient, path: str, term: str) -> None:
+    assert f"<dt>{term}</dt>" in client.get(path).text
+
+
+@pytest.mark.parametrize("path", ["/", "/privacy", "/tos", "/me"])
+def test_every_page_links_the_legal_pages_and_carries_riot_s_notice(member: TestClient, path: str) -> None:
+    text = html.unescape(member.get(path).text)
+
+    assert 'href="/privacy"' in text
+    assert 'href="/tos"' in text
+    assert RIOT_NOTICE in text
+
+
 def test_a_page_that_needs_sign_in_sends_you_to_sign_in(client: TestClient) -> None:
     page = client.get("/me", follow_redirects=False)
     fragment = client.get("/me", headers=HTMX, follow_redirects=False)
