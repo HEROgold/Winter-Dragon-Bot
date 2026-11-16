@@ -1,7 +1,7 @@
 """The hangman tables: a game, and the members who took part in it."""
 
 from datetime import datetime
-lazy from enum import StrEnum
+from enum import StrEnum
 lazy from typing import ClassVar
 
 from sqlalchemy import BigInteger

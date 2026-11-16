@@ -3,6 +3,8 @@
 from datetime import datetime
 lazy from typing import TYPE_CHECKING, ClassVar, Self, override
 
+from herogold.errors import with_known_exception
+from herogold.log import LoggerMixin
 from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import BigInteger
 from sqlmodel import Field as ColumnField
@@ -10,8 +12,6 @@ from sqlmodel import Session
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership
 from wd_types.clock import utc_now
-lazy from herogold.errors import with_known_exception
-lazy from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_discord.embed import Embed, EmbedField, EmbedFooter
@@ -25,7 +25,7 @@ lazy from wd_discord.limits import (
 )
 lazy from wd_errors import BaseError, Refused
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:

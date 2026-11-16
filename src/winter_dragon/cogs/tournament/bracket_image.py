@@ -4,19 +4,19 @@ The image uses the dashboard's look: Archivo on snow, ice lines, the winner of e
 marker, and the matches being played outlined in route blue.
 """
 
+from dataclasses import dataclass
+from functools import cache
+from pathlib import Path
+from typing import TYPE_CHECKING
 lazy import io
-lazy from dataclasses import dataclass
-lazy from functools import cache
-lazy from pathlib import Path
-lazy from typing import TYPE_CHECKING
 
 lazy from PIL import Image, ImageDraw, ImageFont
 lazy from wd_discord.color import Color
 
 lazy from winter_dragon.config import Settings
 
+from .models import MatchPhase
 lazy from .bracket import BracketSlot, round_name
-lazy from .models import MatchPhase
 
 
 if TYPE_CHECKING:

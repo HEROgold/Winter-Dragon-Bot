@@ -10,7 +10,7 @@ from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from wd_db.extension.lifecycle import owned_by
 lazy from wd_errors import Refused
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 
 
 if TYPE_CHECKING:

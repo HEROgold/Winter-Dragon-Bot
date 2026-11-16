@@ -7,8 +7,8 @@ Each action takes an open session and leaves committing to the caller. An action
 from dataclasses import dataclass
 lazy from typing import TYPE_CHECKING, override
 
+from herogold.state import StateMachine
 from sqlmodel import Session, col, select
-lazy from herogold.state import StateMachine
 lazy from sqlalchemy import exists
 lazy from sqlalchemy.orm import aliased
 lazy from wd_db.extension._herogold import Repository

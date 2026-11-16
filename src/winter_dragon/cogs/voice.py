@@ -1,13 +1,15 @@
 """The /voice command group: split a voice channel into teams that each get a voice channel of their own."""
 
+from random import Random
 lazy import asyncio
-lazy from random import Random
 lazy from typing import TYPE_CHECKING, Annotated, ClassVar, Unpack, override
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session
 from wd_bot.commands import Describe, Range
 from wd_db.extension.lifecycle import DiscordKeyedModel, Ownership
+from wd_discord.gateway import EventName
+from wd_discord.interactions import InteractionContextType
 lazy from wd_bot.cogs import BotArgs, Cog, GroupCog
 lazy from wd_db.extension.lifecycle import alive, alive_by_id
 
@@ -18,8 +20,6 @@ lazy from wd_discord import (
     GuildComponentInteraction,
     is_network_error,
 )
-lazy from wd_discord.gateway import EventName
-lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.channel import GuildChannelParams
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap

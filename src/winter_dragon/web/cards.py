@@ -8,7 +8,7 @@ missing or stale, the card sends the viewer through a silent sign-in and back.
 
 import asyncio
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 lazy from urllib.parse import quote
 
 from fastapi import APIRouter, Depends

@@ -1,7 +1,7 @@
 """The team tables: a team and its members, lasting or temporary."""
 
 from datetime import datetime
-lazy from enum import StrEnum
+from enum import StrEnum
 lazy from typing import ClassVar
 
 from sqlalchemy import BigInteger

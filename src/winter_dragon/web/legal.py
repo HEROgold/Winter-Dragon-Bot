@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 lazy from fastapi import Request
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from starlette.responses import Response
 
 lazy from winter_dragon.cogs.privacy.domain import RETENTION, USAGE_RETENTION
 lazy from winter_dragon.web.responses import render

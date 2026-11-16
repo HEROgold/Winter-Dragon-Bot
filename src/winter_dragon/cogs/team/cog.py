@@ -1,8 +1,8 @@
 """The /team command group: create a lasting team, split members into temporary ones, invite, manage and leave teams."""
 
+from random import Random
 from typing import Annotated
 lazy from datetime import timedelta
-lazy from random import Random
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session
@@ -10,7 +10,7 @@ from wd_bot.commands import Describe, Length, Lookup, Range
 lazy from wd_bot.cogs import Cog, GroupCog
 
 # Command resolves option annotations from module globals at runtime, so these types must be available here.
-lazy from wd_discord import (  # noqa: TC002 - wd_bot reads the handler's interaction type at runtime
+lazy from wd_discord import (
     GuildCommandInteraction,
     GuildComponentInteraction,
     User,
@@ -22,7 +22,7 @@ lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 lazy from winter_dragon.stored import stored
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed, mentions
 

@@ -6,7 +6,7 @@ lazy from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends, Form
 lazy from fastapi import HTTPException, Request, status
 lazy from sqlmodel import Session
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from starlette.responses import Response
 lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.bot import invite_url
 lazy from wd_types.clock import utc_now

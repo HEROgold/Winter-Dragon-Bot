@@ -22,7 +22,7 @@ lazy from wd_discord.files import File
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice
 lazy from wd_errors import Refused
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 lazy from winter_dragon.ui import CreatedEmbed
 
 

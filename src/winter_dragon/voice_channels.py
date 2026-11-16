@@ -4,8 +4,8 @@ Who is in which voice channel comes from GUILD_CREATE and VOICE_STATE_UPDATE.
 """
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 lazy from collections import defaultdict
-lazy from typing import TYPE_CHECKING
 
 lazy from sqlmodel import Session
 lazy from wd_db.extension.lifecycle import alive_by_id, owned_by, soft_delete

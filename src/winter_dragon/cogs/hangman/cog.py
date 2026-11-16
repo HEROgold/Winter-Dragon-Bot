@@ -1,14 +1,14 @@
 """The /hangman command: start a game, and guess at it with a button and a modal."""
 
-lazy from random import Random
+from random import Random
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session
-lazy from wd_bot.cogs import Cog
+from wd_bot.cogs import Cog
+from wd_discord.interactions import InteractionContextType
 lazy from wd_db.extension.lifecycle import alive
-lazy from wd_discord import GuildCommandInteraction  # noqa: TC002 - wd_bot reads the handler's interaction type at runtime
+lazy from wd_discord import GuildCommandInteraction
 lazy from wd_discord.components import Label, Modal, TextInput
-lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_errors import Refused
 
 lazy from .cards import game_message, guess_buttons

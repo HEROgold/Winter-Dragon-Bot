@@ -1,8 +1,8 @@
 """A cog demonstrating independent background work, not just reacting to dispatch events."""
 
-lazy from wd_bot.cogs import Cog
+from wd_bot.cogs import Cog
 
-lazy from winter_dragon.config import CogConfig
+from winter_dragon.config import CogConfig
 
 
 class HeartbeatSettings:
