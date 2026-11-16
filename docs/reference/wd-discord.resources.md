@@ -364,6 +364,15 @@ https://docs.discord.com/developers/resources/sticker#sticker-object.
   format_type: StickerFormatType, available: bool | None, guild_id: Snowflake | None, user: User | None, sort_value: int
   | None
 
+## `wd_discord.resources.guild.user_guild` — `wd-discord/src/wd_discord/resources/guild/user_guild.py`
+A guild in a user's guild list (https://docs.discord.com/developers/resources/user#get-current-user-guilds).
+
+### `class UserGuild(DiscordModel)`
+One guild of ``GET /users/@me/guilds``: a user's, or a bot's, with the permissions they hold there.
+
+- fields: id: Snowflake, name: str, icon: ImageHash | None, banner: ImageHash | None, owner: bool, permissions:
+  PermissionsField, features: list[str], approximate_member_count: int | None, approximate_presence_count: int | None
+
 ## `wd_discord.resources.guild.welcome_screen` — `wd-discord/src/wd_discord/resources/guild/welcome_screen.py`
 Discord welcome screen models.
 

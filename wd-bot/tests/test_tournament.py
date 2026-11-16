@@ -7,17 +7,19 @@ from random import Random
 from typing import TYPE_CHECKING
 
 import pytest
+from sqlalchemy import event
 from sqlmodel import Session, col
 from wd_bot.commands import Lookup
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import DELETED_MEMBER, alive, owned_by, soft_delete
 from wd_discord import AutocompleteInteraction
+from wd_discord.errors.api import ApiResponseError
 from wd_discord.gateway.events import AutocompleteInteraction as AutocompleteInteractionModel
 from wd_discord.gateway.events import InteractionData, InteractionDataOption, InteractionType, ResolvedData
 from wd_discord.permissions import Permissions
 from wd_discord.resources.user import User
-from wd_discord.testing import member_json, message_json, user_json
 from wd_discord.snowflake import Snowflake
+from wd_discord.testing import member_json, message_json, user_json
 from wd_errors import Refused
 from wd_types.clock import utc_now
 
@@ -51,7 +53,7 @@ from winter_dragon.cogs.tournament.models import (
 
 
 if TYPE_CHECKING:
-    from collections.abc import Generator
+    from collections.abc import Callable, Generator
 
     from conftest import ComponentInteractionFactory, InteractionFactory
     from sqlalchemy import Engine
@@ -87,7 +89,12 @@ def _named(
     status: TournamentStatus = TournamentStatus.SIGNUP,
 ) -> Tournament:
     tournament = Tournament(
-        guild_id=guild_id, organiser_id=organiser_id, name=name, mode=TeamMode.SOLO, team_size=1, status=status
+        guild_id=guild_id,
+        organiser_id=organiser_id,
+        name=name,
+        mode=TeamMode.SOLO,
+        team_size=1,
+        status=status,
     )
     session.add(tournament)
     session.commit()
@@ -197,7 +204,9 @@ def test_enter_refuses_a_temporary_team_a_non_captain_a_second_entry_and_a_dupli
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS)
         (temporary,) = team_service.create_temporary_teams(
-            session, [[Snowflake(20), Snowflake(21)]], TeamOrigin.SOLO_TOURNAMENT
+            session,
+            [[Snowflake(20), Snowflake(21)]],
+            TeamOrigin.SOLO_TOURNAMENT,
         )
         with _refused("Only the team's captain can enter it."):
             service.enter(session, tournament, temporary, Snowflake(20))
@@ -247,7 +256,7 @@ def test_a_member_can_play_for_two_entries_of_one_tournament(engine: Engine) -> 
 def test_hiding_a_member_withdraws_only_the_entries_left_without_players(engine: Engine) -> None:
     with Session(engine) as session:
         tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
-        reds = _entered(session, tournament, 10, "Reds")
+        _entered(session, tournament, 10, "Reds")
         blues = _entered(session, tournament, 11, "Blues")
         team_service.join(session, session.get_one(Team, blues.team_id), Snowflake(10))
         session.commit()
@@ -529,7 +538,11 @@ async def test_post_shows_a_tournament_in_this_channel_and_refuses_another_serve
     await Tournaments.post_tournament.invoke(
         cog,
         make_interaction(
-            "tournament", options=options, guild_id=GUILD_ID, channel_id=21, permissions=Permissions.MANAGE_MESSAGES
+            "tournament",
+            options=options,
+            guild_id=GUILD_ID,
+            channel_id=21,
+            permissions=Permissions.MANAGE_MESSAGES,
         ),
         options,
     )
@@ -695,7 +708,9 @@ def test_signup_buttons_depend_on_the_team_mode(engine: Engine, discord_client: 
     assert _labels({"components": [shown.model_dump(mode="json")]}) == expected
 
 
-def test_the_participants_button_only_shows_once_the_card_cuts_the_list(engine: Engine, discord_client: RecordingClient) -> None:
+def test_the_participants_button_only_shows_once_the_card_cuts_the_list(
+    engine: Engine, discord_client: RecordingClient
+) -> None:
     with Session(engine) as session:
         tournament = _solo(session, players=600)
         shown = _cog(engine, discord_client)._card(session, tournament)[0]  # noqa: SLF001
@@ -837,7 +852,7 @@ def test_drafts_votes_and_ballots_belong_to_the_tournaments_guild(engine: Engine
             assert len(session.exec(owned_by(model, guild=GUILD_ID)).all()) == 1
             assert session.exec(owned_by(model, guild=GUILD_ID + 1)).all() == []
         assert [ballot.user_id for ballot in session.exec(owned_by(MatchBallot, member=captain, guild=GUILD_ID))] == [
-            int(captain)
+            int(captain),
         ]
         assert [player.user_id for player in session.exec(owned_by(EntryPlayer, member=captain))] == [int(captain)]
 
@@ -858,7 +873,7 @@ async def test_join_leave_join_signs_up_once(
 
     with Session(engine) as session:
         assert [signup.user_id for signup in service.signups_of(session, session.get_one(Tournament, tournament_id))] == [
-            ORGANISER
+            ORGANISER,
         ]
 
 
@@ -1176,7 +1191,8 @@ def test_a_match_copies_its_entries_players_into_its_lineup_once_ready(engine: E
             assert match.phase is MatchPhase.READY
             for entry_id in (match.entry_a_id or 0, match.entry_b_id or 0):
                 assert service.lineup(session, match, session.get_one(TournamentEntry, entry_id)) == service.roster(
-                    session, session.get_one(TournamentEntry, entry_id)
+                    session,
+                    session.get_one(TournamentEntry, entry_id),
                 )
         (final,) = _round(session, tournament, 1)
         assert final.phase is MatchPhase.WAITING
@@ -1188,7 +1204,8 @@ def test_a_match_copies_its_entries_players_into_its_lineup_once_ready(engine: E
         assert final.phase is MatchPhase.READY
         for entry_id in (final.entry_a_id or 0, final.entry_b_id or 0):
             assert service.lineup(session, final, session.get_one(TournamentEntry, entry_id)) == service.roster(
-                session, session.get_one(TournamentEntry, entry_id)
+                session,
+                session.get_one(TournamentEntry, entry_id),
             )
 
 
@@ -1211,7 +1228,9 @@ def test_a_lineup_change_reaches_the_next_match_not_yet_live_and_later_ones(engi
         session.commit()
         assert service.roster(session, session.get_one(TournamentEntry, reds_id)) == [Snowflake(10), Snowflake(21)]
         assert service.lineup(
-            session, session.get_one(TournamentMatch, match_id), session.get_one(TournamentEntry, reds_id)
+            session,
+            session.get_one(TournamentMatch, match_id),
+            session.get_one(TournamentEntry, reds_id),
         ) == [Snowflake(10), Snowflake(21)]
 
         # A live match keeps its lineup; the change applies from the match after.
@@ -1222,7 +1241,9 @@ def test_a_lineup_change_reaches_the_next_match_not_yet_live_and_later_ones(engi
         session.commit()
         assert service.roster(session, session.get_one(TournamentEntry, reds_id)) == [Snowflake(10)]
         assert service.lineup(
-            session, session.get_one(TournamentMatch, match_id), session.get_one(TournamentEntry, reds_id)
+            session,
+            session.get_one(TournamentMatch, match_id),
+            session.get_one(TournamentEntry, reds_id),
         ) == [Snowflake(10), Snowflake(21)]
 
         # A decided match never changes; the final copies the players as they are when it becomes ready.
@@ -1230,7 +1251,9 @@ def test_a_lineup_change_reaches_the_next_match_not_yet_live_and_later_ones(engi
         _change(session, tournament, reds, 10, 22, playing=True)
         session.commit()
         assert service.lineup(
-            session, session.get_one(TournamentMatch, match_id), session.get_one(TournamentEntry, reds_id)
+            session,
+            session.get_one(TournamentMatch, match_id),
+            session.get_one(TournamentEntry, reds_id),
         ) == [Snowflake(10), Snowflake(21)]
         final = _undecided_match(session, tournament, reds)
         assert service.lineup(session, final, session.get_one(TournamentEntry, reds_id)) == []
@@ -1481,7 +1504,7 @@ def test_a_lineup_change_is_logged_with_its_reason_and_the_match_it_changed(engi
         session.commit()
 
         changes = list(
-            session.exec(alive(LineupChange).where(LineupChange.entry_id == blues_id).order_by(col(LineupChange.id)))
+            session.exec(alive(LineupChange).where(LineupChange.entry_id == blues_id).order_by(col(LineupChange.id))),
         )
         assert [(change.user_id, change.playing, change.changed_by, change.reason, change.match_id) for change in changes] == [
             (21, True, 11, "stand-in", final_id),
@@ -1578,7 +1601,7 @@ def test_a_member_deletion_anonymises_the_match_audit(engine: Engine) -> None:
         decided = session.get_one(TournamentMatch, match_id)
         assert {event.actor_id for event in events} == {DELETED_MEMBER}
         assert sorted((change.user_id, change.changed_by) for change in changes) == sorted(
-            [(DELETED_MEMBER, 10), (12, DELETED_MEMBER)]
+            [(DELETED_MEMBER, 10), (12, DELETED_MEMBER)],
         )
         assert decided.decided_by == DELETED_MEMBER
 
@@ -1834,3 +1857,120 @@ async def test_a_vote_shows_each_answers_share_tells_the_voter_and_marks_the_win
     assert "This vote is closed with 1 vote." in _shown(closed)
     assert "**Nuke** ⚑, 1 vote" in _shown(closed)
     assert _labels(closed) == []
+
+
+def _statements(session: Session, work: Callable[[], object]) -> int:
+    """Count the SQL statements, inserts aside, ``work`` sends through ``session``; the session is flushed after."""
+    count = 0
+
+    def counted(*args: object) -> None:
+        nonlocal count
+        if not str(args[2]).startswith("INSERT"):  # one row each on sqlite; Postgres batches them
+            count += 1
+
+    bind = session.get_bind()
+    event.listen(bind, "before_cursor_execute", counted)
+    try:
+        work()
+        session.flush()
+    finally:
+        event.remove(bind, "before_cursor_execute", counted)
+    return count
+
+
+def test_the_signup_card_takes_the_same_queries_for_any_number_of_teams(engine: Engine) -> None:
+    def run(teams: int) -> int:
+        with Session(engine) as session:
+            tournament = _tournament(session, TeamMode.CAPTAINS, team_size=2)
+            for number in range(teams):
+                _entered(session, tournament, 100 + number, f"Team {teams}-{number}")
+            return _statements(session, lambda: Tournaments._participants(session, tournament))  # noqa: SLF001
+
+    assert run(2) == run(20)
+
+
+def test_cancelling_takes_the_same_queries_for_any_number_of_teams(engine: Engine) -> None:
+    def run(players: int) -> int:
+        with Session(engine) as session:
+            tournament = _solo(session, players)
+            service.start(session, tournament, Random(1))
+            session.commit()
+            count = _statements(session, lambda: service.cancel(session, tournament))
+            session.commit()
+            return count
+
+    assert run(4) == run(32)
+
+
+async def test_a_failed_post_leaves_the_new_tournament_open_and_points_at_post(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+) -> None:
+    discord_client.fail("POST", "/channels/20/messages", ApiResponseError(code=50013, message="Missing Permissions"))
+    options = [InteractionDataOption(name="name", type=3, value="Cup")]
+    interaction = make_interaction(
+        "tournament",
+        options=options,
+        guild_id=GUILD_ID,
+        channel_id=20,
+        permissions=Permissions.MANAGE_GUILD,
+    )
+
+    await Tournaments.create.invoke(_cog(engine, discord_client), interaction, options)
+
+    with Session(engine) as session:
+        assert session.exec(alive(Tournament)).one().name == "Cup"
+        assert session.exec(alive(TournamentPost)).all() == []
+    assert "couldn't post it here" in discord_client.requests_to("POST", "/webhooks/2/tok")[-1].json["content"]
+
+
+async def test_no_connection_is_held_while_a_card_is_posted_to_discord(
+    engine: Engine,
+    make_interaction: InteractionFactory,
+    discord_client: RecordingClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    held = peak = 0
+    waiting: list[int] = []
+
+    @event.listens_for(engine, "checkout")
+    def _checked_out(*_: object) -> None:
+        nonlocal held, peak
+        held += 1
+        peak = max(peak, held)
+
+    @event.listens_for(engine, "checkin")  # codespell:ignore checkin
+    def _checked_in(*_: object) -> None:
+        nonlocal held
+        held -= 1
+
+    original = type(discord_client)._send  # noqa: SLF001
+
+    async def probed(self: RecordingClient, *args: object, **kwargs: object) -> object:
+        waiting.append(held)
+        return await original(self, *args, **kwargs)
+
+    monkeypatch.setattr(type(discord_client), "_send", probed)
+    discord_client.reply("POST", "/channels/20/messages", message_json(id="200", channel_id="20"))
+    discord_client.reply("POST", "/channels/21/messages", message_json(id="210", channel_id="21"))
+    cog = _cog(engine, discord_client)
+    options = [InteractionDataOption(name="name", type=3, value="Cup")]
+    await Tournaments.create.invoke(
+        cog,
+        make_interaction("tournament", options=options, guild_id=GUILD_ID, channel_id=20, permissions=Permissions.MANAGE_GUILD),
+        options,
+    )
+    with Session(engine) as session:
+        picked = [_pick(session.exec(alive(Tournament)).one())]
+    await Tournaments.post_tournament.invoke(
+        cog,
+        make_interaction(
+            "tournament", options=picked, guild_id=GUILD_ID, channel_id=21, permissions=Permissions.MANAGE_MESSAGES
+        ),
+        picked,
+    )
+
+    assert peak >= 1  # the counter sees the scopes' own connections, so zero while waiting means something
+    assert len(waiting) >= 4  # both defers, both cards, both follow-ups
+    assert set(waiting) == {0}

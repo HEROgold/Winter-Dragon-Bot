@@ -846,6 +846,8 @@ A role known only by guild and ID.
 ## `wd_discord.entities.user` — `wd-discord/src/wd_discord/entities/user.py`
 Users (https://docs.discord.com/developers/resources/user).
 
+- module names: MAX_GUILDS_PER_PAGE
+
 ### `class BaseUser(ClientBound)`
 What can be done to a user knowing only their ID: read them, open a DM, message them.
 
@@ -871,9 +873,17 @@ The user behind the client's token.
 ### `class PartialUser(BaseUser, Partial[User])`
 A user known only by ID.
 
+### `class UserGuild(Entity[UserGuildModel])`
+A guild in the list of the user behind the client's token, with the permissions they hold there.
+
+- `@property id -> Snowflake` — The guild's ID.
+- `@property name -> str` — The guild's name.
+- `@property is_owner -> bool` — Whether the user owns the guild.
+
 ### `@dataclass class UserStore(EntityStore[PartialUser])`
 Users the client can see.
 
+- `async guilds() -> Generator[UserGuild] | NetworkError` — GET /users/@me/guilds - every guild the user behind the client's token is in.
 - `async me() -> CurrentUser | NetworkError` — GET /users/@me - the user behind the client's token; the client's cache keeps it.
 
 ## `wd_discord.entities.voice` — `wd-discord/src/wd_discord/entities/voice.py`

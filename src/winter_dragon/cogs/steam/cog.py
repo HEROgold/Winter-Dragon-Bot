@@ -5,7 +5,6 @@ lazy from datetime import datetime, timedelta
 lazy from typing import TYPE_CHECKING, override
 
 from wd_bot.commands import Describe, Range
-lazy from sqlmodel import Session
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import create_or_restore, soft_delete, upsert
 lazy from wd_discord.snowflake import Snowflake
@@ -17,7 +16,7 @@ lazy from winter_dragon.cogs.steam.notifier import SteamSaleNotifier
 lazy from winter_dragon.cogs.steam.pages import build_page, page_buttons, page_count
 lazy from winter_dragon.cogs.steam.scrapers import ScrapedSale, ScrapeFailure, SteamScraper
 lazy from winter_dragon.cogs.steam.settings import SteamSettings
-lazy from winter_dragon.cogs.steam.store import SteamSaleStore
+lazy from winter_dragon.cogs.steam.store import SaleRef, SteamSaleStore
 lazy from winter_dragon.cogs.steam.throttle import RequestThrottle
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
@@ -26,8 +25,6 @@ if TYPE_CHECKING:
     lazy from collections.abc import Coroutine, Generator, Iterable
 
     lazy from wd_discord import CommandInteraction, ComponentInteraction
-
-    lazy from winter_dragon.cogs.steam.models import SteamSale
 
 
 def next_scrape_time(now: datetime, interval: timedelta) -> datetime:
@@ -85,20 +82,21 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
     async def scrape_and_recheck(self) -> float:
         """Scrape when due, re-check sales that just ended, and return the seconds until either is due next.
 
-        Scrapes on load, then on :func:`next_scrape_time`.
+        Scrapes on load, then on :func:`next_scrape_time`. No database session is open while it waits on Steam or
+        Discord: each step reads in one short scope, talks to the network with none, then writes in another.
         """
         if self._next_scrape is None or utc_now() >= self._next_scrape:
             await self._guarded(self.scrape(utc_now()))
             self._next_scrape = next_scrape_time(utc_now(), timedelta(seconds=SteamSettings.update_interval))
             self.logger.info(t"Next Steam scrape at {self._next_scrape:%Y-%m-%d %H:%M} UTC")
         await self._guarded(self.recheck_due(utc_now()))
-        with Session(self.bind) as session:
-            next_recheck = SteamSaleStore(session).next_recheck(delay=self._recheck_delay)
+        with SteamSaleStore.begin(self.engine) as store:
+            next_recheck = store.next_recheck(delay=self._recheck_delay)
         wake = self._next_scrape if next_recheck is None else min(self._next_scrape, next_recheck)
         return max(SteamSettings.min_sleep, (wake - utc_now()).total_seconds())
 
     async def _guarded(self, work: Coroutine[object, object, None]) -> None:
-        """Run ``work``, logging instead of raising, so a failed scrape doesn't skip the re-check after it."""
+        """Run ``work``, logging its failure instead of raising, so a failure doesn't skip what follows."""
         try:
             await work
         except Exception:
@@ -112,55 +110,67 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         or a lower subscriber threshold, so /steam show and every subscriber find their sales. Shown sales this
         scrape didn't list (ended, or no longer among the top sellers) are checked again, unless their end is
         known: those are re-checked when they end, by :meth:`recheck_due`.
+
+        Each database step commits on its own: the sales, then the re-checked ones, then the notifications. A crash
+        in between loses nothing, because subscribers are owed every sale discovered after their last notification.
         """
-        with Session(self.bind) as session:
-            store = SteamSaleStore(session)
+        with SteamSaleStore.begin(self.engine) as store:
             lowest = store.lowest_threshold()
-            percent = SteamSettings.stored_percent if lowest is None else min(SteamSettings.stored_percent, lowest)
-            seen: set[int] = set()
-            sent_before = self.throttle.sent
-            async with SteamScraper(throttle=self.throttle) as scraper:
-                for query_percent, limit in sale_queries(percent, SteamSettings.complete_percent, SteamSettings.top_sellers):
-                    async for scraped in scraper.query_sales(query_percent, limit):
-                        if scraped.id not in seen:
-                            seen.add(scraped.id)
-                            store.record(scraped, now=now, outdated_after=self._outdated_after)
-                if seen:  # finding nothing means Steam failed, not that every sale ended
-                    unseen = store.unseen_without_end(now, percent, outdated_after=self._outdated_after)
-                    await self._recheck(scraper, store, unseen, now)
-            notified = await SteamSaleNotifier(self.bot.client, store, color=SteamSettings.embed_color).notify(
-                now=now,
-                content=self._notification_content(),
-            )
-            requests = self.throttle.sent - sent_before
-            self.logger.info(
-                t"Steam scrape done (threshold {percent} percent, {len(seen)} sales, {requests} requests), "
-                t"notified {notified} subscriber(s)",
-            )
+        percent = SteamSettings.stored_percent if lowest is None else min(SteamSettings.stored_percent, lowest)
+        listed: dict[int, ScrapedSale] = {}
+        sent_before = self.throttle.sent
+        async with SteamScraper(throttle=self.throttle) as scraper:
+            for query_percent, limit in sale_queries(percent, SteamSettings.complete_percent, SteamSettings.top_sellers):
+                async for scraped in scraper.query_sales(query_percent, limit):
+                    listed.setdefault(scraped.id, scraped)
+            if listed:  # finding nothing means Steam failed, not that every sale ended
+                with SteamSaleStore.begin(self.engine) as store:
+                    store.record_many(listed.values(), now=now, outdated_after=self._outdated_after)
+                    unseen = SaleRef.of_all(store.unseen_without_end(now, percent, outdated_after=self._outdated_after))
+                await self._recheck(scraper, unseen, now)
+        notified = await SteamSaleNotifier(self.bot.client, self.engine, color=SteamSettings.embed_color).notify(
+            now=now,
+            content=self._notification_content(),
+        )
+        requests = self.throttle.sent - sent_before
+        self.logger.info(
+            t"Steam scrape done (threshold {percent} percent, {len(listed)} sales, {requests} requests), "
+            t"notified {notified} subscriber(s)",
+        )
 
     async def recheck_due(self, now: datetime) -> None:
         """Check the sales whose announced end has passed: update those still running, remove those that ended."""
-        with Session(self.bind) as session:
-            store = SteamSaleStore(session)
-            due = store.due_rechecks(now=now, delay=self._recheck_delay)
-            if not due or self.throttle.paused:
-                return
-            async with SteamScraper(throttle=self.throttle) as scraper:
-                await self._recheck(scraper, store, due, now)
+        with SteamSaleStore.begin(self.engine) as store:
+            due = SaleRef.of_all(store.due_rechecks(now=now, delay=self._recheck_delay))
+        if not due or self.throttle.paused:
+            return
+        async with SteamScraper(throttle=self.throttle) as scraper:
+            await self._recheck(scraper, due, now)
 
-    async def _recheck(self, scraper: SteamScraper, store: SteamSaleStore, sales: Iterable[SteamSale], now: datetime) -> None:
-        """Check ``sales`` on Steam: update those still running, remove those that ended, retry later on failure."""
+    async def _recheck(self, scraper: SteamScraper, sales: Iterable[SaleRef], now: datetime) -> None:
+        """Check ``sales`` on Steam: update those still running, remove those that ended, retry later on failure.
+
+        Asks Steam with no session open, then applies every answer in one write scope.
+        """
         by_item = {item: sale for sale in sales if (item := sale.steam_url.store_item) is not None}
+        refreshed: list[tuple[int, ScrapedSale]] = []
+        ended: list[int] = []
         async for item, details in scraper.get_sales(by_item):
             sale = by_item[item]
             match details:
                 case ScrapeFailure():
                     self.logger.warning(t"Could not re-check {sale.url}; trying again later")
                 case ScrapedSale():
-                    store.refresh(sale, details, now=now)
+                    refreshed.append((sale.id, details))
                 case None:
                     self.logger.info(t"Steam sale ended: {sale.title}")
-                    store.remove(sale)
+                    ended.append(sale.id)
+        if not refreshed and not ended:
+            return
+        with SteamSaleStore.begin(self.engine) as store:
+            rows = store.in_ids([*(sale_id for sale_id, _ in refreshed), *ended])
+            store.refresh([(rows[sale_id], details) for sale_id, details in refreshed if sale_id in rows], now=now)
+            store.remove(rows[sale_id] for sale_id in ended if sale_id in rows)
 
     def _notification_content(self) -> str:
         """Return the text above a sale DM, pointing at the commands to stop notifications and see every sale."""
@@ -175,15 +185,14 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         user = interaction.user
         if user is None:
             return
-        with Session(self.bind) as session:
-            if SteamSaleStore(session).subscriber(user.id) is not None:
+        with SteamSaleStore.begin(self.engine) as store:
+            if store.subscriber(user.id) is not None:
                 msg = "Already in the list of recipients"
                 raise Refused(msg)
             create_or_restore(
-                session,
+                store.session,
                 SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=SteamSettings.default_threshold),
             )
-            session.commit()
         subscribed = f"I will notify you of new steam games!\nUse {self.mention(self.show)} to view current sales."
         await interaction.respond(embeds=[CreatedEmbed(description=subscribed)], ephemeral=True)
 
@@ -204,14 +213,17 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         user = interaction.user
         if user is None:
             return
-        with Session(self.bind) as session:
-            subscriber = SteamSaleStore(session).subscriber(user.id)
+        with SteamSaleStore.begin(self.engine) as store:
+            subscriber = store.subscriber(user.id)
 
             def set_threshold(subscription: SteamUsers) -> None:
                 subscription.sale_threshold = percent
 
-            upsert(session, SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=percent), set_threshold)
-            session.commit()
+            upsert(
+                store.session,
+                SteamUsers(id=int(user.id), last_notification=utc_now(), sale_threshold=percent),
+                set_threshold,
+            )
         content = f"Changed your sale notification threshold to {percent}%."
         if subscriber is None:
             content += f"\nI will notify you of new steam games! Use {self.mention(self.remove)} to stop."
@@ -223,13 +235,12 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         user = interaction.user
         if user is None:
             return
-        with Session(self.bind) as session:
-            subscriber = SteamSaleStore(session).subscriber(user.id)
+        with SteamSaleStore.begin(self.engine) as store:
+            subscriber = store.subscriber(user.id)
             if subscriber is None:
                 msg = "Not in the list of recipients"
                 raise Refused(msg)
-            soft_delete(session, subscriber)
-            session.commit()
+            soft_delete(store.session, subscriber)
         unsubscribed = "I will no longer notify you of new steam games."
         await interaction.respond(embeds=[DeletedEmbed(description=unsubscribed)], ephemeral=True)
 
@@ -251,17 +262,13 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         user = interaction.user
         if user is None:
             return
-        with Session(self.bind) as session:
-            store = SteamSaleStore(session)
+        with SteamSaleStore.begin(self.engine) as store:
             sales = store.current_sales(percent, now=utc_now(), outdated_after=self._outdated_after)
-            if not sales:
-                await interaction.respond(
-                    content=f"No steam games found with sales {percent}% or higher.",
-                    ephemeral=True,
-                )
-                return
-            await interaction.defer()
-            embed = build_page(sales, store.properties(sales), page=0, color=SteamSettings.embed_color)
+            embed = build_page(sales, store.properties(sales), page=0, color=SteamSettings.embed_color) if sales else None
+        if embed is None:
+            await interaction.respond(content=f"No steam games found with sales {percent}% or higher.", ephemeral=True)
+            return
+        await interaction.defer()
         buttons = page_buttons(self.show_page, owner_id=user.id, percent=percent, page=0, pages=page_count(len(sales)))
         await interaction.edit_original(embeds=[embed], components=buttons)
 
@@ -272,8 +279,7 @@ class SteamSales(GroupCog, name="steam", description="Get notified about free an
         if user is None or str(user.id) != owner_id:
             msg = f"Only the person who ran this command can page through it. Use {self.mention(self.show)} for your own list."
             raise Refused(msg)
-        with Session(self.bind) as session:
-            store = SteamSaleStore(session)
+        with SteamSaleStore.begin(self.engine) as store:
             sales = store.current_sales(int(percent), now=utc_now(), outdated_after=self._outdated_after)
             pages = page_count(len(sales))
             target = min(max(int(page), 0), pages - 1)

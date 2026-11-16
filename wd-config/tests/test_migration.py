@@ -84,13 +84,13 @@ MIGRATE = """
 from pathlib import Path
 from winter_dragon.config_migration import migrate_legacy_config
 report = migrate_legacy_config()
-backups = sorted(path.name for path in Path().glob("config.ini.bak*"))
+backups = sorted(path.name for path in Path("logs").glob("config.ini.bak*"))
 result = {
     "migrated": report is not None,
     "dropped": sorted(report.dropped) if report else [],
     "kept": sorted(report.kept) if report else [],
     "backups": backups,
-    "backup_text": [Path(name).read_text(encoding="utf-8") for name in backups],
+    "backup_text": [(Path("logs") / name).read_text(encoding="utf-8") for name in backups],
 }
 """
 
@@ -147,7 +147,7 @@ def test_legacy_sections_move_to_their_new_files(boot_config: BootConfig) -> Non
 
 
 def test_original_is_backed_up(boot_config: BootConfig) -> None:
-    """The untouched legacy file is copied to config.ini.bak before anything is rewritten."""
+    """The untouched legacy file is copied to logs/config.ini.bak before anything is rewritten."""
     boot = boot_config(MIGRATE, files={"config.ini": LEGACY_CONFIG})
 
     assert boot.values["backups"] == ["config.ini.bak"]
@@ -155,8 +155,8 @@ def test_original_is_backed_up(boot_config: BootConfig) -> None:
 
 
 def test_existing_backup_is_never_overwritten(boot_config: BootConfig) -> None:
-    """An older config.ini.bak stays; the new backup takes the next free numbered name."""
-    boot = boot_config(MIGRATE, files={"config.ini": LEGACY_CONFIG, "config.ini.bak": "[Old]\nkey = 1\n"})
+    """An older logs/config.ini.bak stays; the new backup takes the next free numbered name."""
+    boot = boot_config(MIGRATE, files={"config.ini": LEGACY_CONFIG, "logs/config.ini.bak": "[Old]\nkey = 1\n"})
 
     assert boot.values["backups"] == ["config.ini.bak", "config.ini.bak.1"]
     assert boot.values["backup_text"] == ["[Old]\nkey = 1\n", LEGACY_CONFIG]

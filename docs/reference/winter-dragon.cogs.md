@@ -383,6 +383,7 @@ The /reminder command group: one-off and repeating reminders, sent as DMs by a b
 
 - `reminder_choices(reminders: Generator[AnyReminder], current: str) -> Generator[ApplicationCommandOptionChoice]` — Yield a choice for each of ``reminders`` whose content contains ``current``, ignoring case.
 - `async send_reminder(client: Client, reminder: AnyReminder) -> bool` — DM ``reminder`` to its user; ``False`` when Discord refused it (e.g. their DMs are closed).
+- `delete_reminder(session: Session, reminder: AnyReminder) -> None` — Soft-delete ``reminder`` through the repository of its table; the caller commits.
 
 ### `class Reminders(GroupCog, name='reminder', description='Set reminders for yourself')`
 Stores reminders and DMs them to their users when due, from a background task.
@@ -518,6 +519,7 @@ A Steam store item on sale; ``id`` is its Steam app (or bundle/sub) ID. Shared d
 
 - fields: title: str, url: str, sale_percent: int, final_price: float, update_datetime: datetime, discovered_at:
   datetime, sale_end: datetime | None
+- attributes: properties
 - `@property steam_url -> SteamURL` — The sale's store page.
 - `is_outdated(after: timedelta, now: datetime) -> bool` — Whether the sale hasn't been seen on Steam for at least ``after``.
 
@@ -526,6 +528,7 @@ One :class:`SaleTypes` a sale has.
 
 - fields: ownership: ClassVar[Ownership], natural_key: ClassVar[tuple[str, ...]], steam_sale_id: int, property:
   SaleTypes
+- attributes: sale
 
 ### `class SteamUsers(DiscordKeyedModel, table=True)`
 A Discord user subscribed to Steam sale DMs; ``id`` is their Discord user ID, and they own it.
@@ -544,7 +547,7 @@ DM subscribers the Steam sales they haven't been told about yet.
 ### `@dataclass class SteamSaleNotifier(LoggerMixin)`
 Sends each subscriber one DM with the sales above their threshold discovered since their last notification.
 
-- fields: client: Client, store: SteamSaleStore, color: int
+- fields: client: Client, engine: Engine, color: int
 - `async notify(*, now: datetime, content: str) -> int` — DM every subscriber with new sales, with ``content`` above the embed; return how many were notified.
 
 ## `winter_dragon.cogs.steam.pages` — `src/winter_dragon/cogs/steam/pages.py`
@@ -594,14 +597,22 @@ How often Steam is scraped, and how its sales are shown.
 ## `winter_dragon.cogs.steam.store` — `src/winter_dragon/cogs/steam/store.py`
 Storing and querying Steam sales and their subscribers.
 
-### `@dataclass class SteamSaleStore`
-Reads and writes Steam sales through one database session.
+### `@dataclass class SaleRef`
+What a re-check needs to know of a stored sale, copied out so it outlives the session that read it.
 
-- fields: session: Session
-- `record(scraped: ScrapedSale, *, now: datetime, outdated_after: timedelta) -> tuple[SteamSale, bool]` — Store a scraped sale, returning the stored row and whether it counts as new.
-- `refresh(sale: SteamSale, scraped: ScrapedSale, *, now: datetime) -> None` — Apply what Steam now says about ``sale``: its current discount, end and properties.
-- `remove(sale: SteamSale) -> None` — Soft-delete ``sale`` and its properties.
-- `properties(sales: Iterable[SteamSale]) -> dict[int, set[SaleTypes]]` — Return the properties of each of ``sales``, by sale ID.
+- fields: id: int, title: str, url: str
+- `@property steam_url -> SteamURL` — The sale's store page.
+- `@classmethod of_all(sales: Iterable[SteamSale]) -> list[SaleRef]` — Copy the sales that have an ID.
+
+### `class SteamSaleStore(Repository[SteamSale], Scoped)`
+Reads and writes Steam sales through one database session; the caller commits.
+
+- `record(scraped: ScrapedSale, *, now: datetime, outdated_after: timedelta) -> tuple[SteamSale, bool]` — Store one scraped sale; see :meth:`record_many`.
+- `record_many(scraped: Iterable[ScrapedSale], *, now: datetime, outdated_after: timedelta) -> list[tuple[SteamSale, bool]]` — Store scraped sales, returning each stored row with whether it counts as new.
+- `refresh(rechecked: Iterable[tuple[SteamSale, ScrapedSale]], *, now: datetime) -> None` — Apply what Steam now says about each sale: its current discount, end and properties.
+- `in_ids(ids: Iterable[int]) -> dict[int, SteamSale]` — Return the alive sales among ``ids``, by ID, in one query.
+- `remove(sales: Iterable[SteamSale]) -> None` — Soft-delete ``sales`` and their properties, in two statements whatever their number.
+- `properties(sales: Iterable[SteamSale]) -> dict[int, set[SaleTypes]]` — Return the properties of each of ``sales`` that has any, by sale ID.
 - `current_sales(percent: int, *, now: datetime, outdated_after: timedelta) -> list[SteamSale]` — Return the sales of at least ``percent`` still running: biggest discount first, then cheapest.
 - `unseen_without_end(moment: datetime, percent: int, *, outdated_after: timedelta) -> list[SteamSale]` — Return the shown sales of at least ``percent`` last seen before ``moment``, longest unseen first.
 - `due_rechecks(*, now: datetime, delay: timedelta) -> Sequence[SteamSale]` — Return the sales whose announced end was at least ``delay`` ago.
@@ -777,14 +788,14 @@ What can happen to a team: creating it, keeping a temporary one, listing its mem
 - `end_expired(session: Session, now: datetime, lifetime: timedelta) -> int` — End every alive temporary team, except a solo tournament's, made at or before ``now - lifetime``; return how many.
 - `end_team(session: Session, team: Team, now: datetime) -> None` — End the temporary ``team`` at ``now``; a lasting or already ended team stays as it is.
 - `members_of(session: Session, team: Team) -> Generator[TeamMember]` — Yield the team's members, longest-standing first.
-- `teams_of(session: Session, user_id: Snowflake) -> Generator[Team]` — Yield the alive, unended teams ``user_id`` is a member of, by name.
+- `teams_of(session: Session, user_id: Snowflake) -> Generator[Team]` — Yield the alive, unended teams ``user_id`` is a member of, by name, in one statement.
 - `membership(session: Session, team: Team, user_id: Snowflake) -> TeamMember | None` — Return ``user_id``'s alive membership of ``team``, if they're in it.
 - `leave(session: Session, team: Team, user_id: Snowflake) -> None` — Take ``user_id`` out of ``team``.
 - `require_captain(team: Team, user_id: Snowflake) -> None` — Refuse unless ``user_id`` captains ``team``.
-- `join(session: Session, team: Team, user_id: Snowflake) -> None` — Add ``user_id`` to ``team``, joining now; refuse when they're in it already.
+- `join(session: Session, team: Team, user_id: Snowflake) -> None` — Add ``user_id`` to ``team``, joining now, or bring back the membership they left; refuse when they're in it.
 - `kick(session: Session, team: Team, captain_id: Snowflake, user_id: Snowflake) -> None` — Take ``user_id`` out of ``team`` for its captain; the captain can't kick themselves.
 - `hand_over(session: Session, team: Team, captain_id: Snowflake, user_id: Snowflake) -> None` — Make the member ``user_id`` captain of ``team``, for its captain.
-- `disband(session: Session, team: Team, captain_id: Snowflake) -> None` — Disband ``team`` for its captain: soft-delete it and every membership.
+- `disband(session: Session, team: Team, captain_id: Snowflake) -> None` — Disband ``team`` for its captain: soft-delete it and every membership, in two statements.
 
 ### `class LeaveHiddenMember(MemberHiddenHook)`
 A member whose data is hidden leaves each of their teams, by the rule ``/team leave`` follows.
@@ -1046,6 +1057,7 @@ What can happen to a tournament: signing up, forming teams, running the bracket,
 - `signup_of(session: Session, tournament: Tournament, user_id: Snowflake) -> TournamentSignup | None` — Return the user's solo sign-up for the tournament, if any.
 - `entries_of(session: Session, tournament: Tournament) -> list[TournamentEntry]` — Return the tournament's teams, in the order they were formed.
 - `roster(session: Session, entry: TournamentEntry) -> list[Snowflake]` — Return the user IDs of the entry's players.
+- `rosters_of(session: Session, entries: Iterable[TournamentEntry]) -> dict[int, list[Snowflake]]` — Return the user IDs of each entry's players, by entry ID, in one query whatever the number of entries.
 - `matches_of(session: Session, tournament: Tournament) -> list[TournamentMatch]` — Return the tournament's matches, round by round, top to bottom.
 - `record_event(session: Session, match: TournamentMatch, kind: MatchEventKind, actor_id: Snowflake, detail: str='') -> None` — Record that ``actor_id`` did ``kind`` in ``match`` now, with a short ``detail``.
 - `match_log(session: Session, match: TournamentMatch) -> list[MatchEvent | LineupChange]` — Return what happened in ``match``: its events, and the lineup changes made for it, oldest first.

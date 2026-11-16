@@ -30,6 +30,8 @@ class DashboardSettings:
     """The key session cookies are signed with: any long random string. Changing it signs everyone out."""
     session_days = DashboardConfig(14)
     """Days a sign-in lasts."""
+    privacy_email = DashboardConfig("privacy@herogold.nl")
+    """The address the privacy policy and terms of service give for questions, problems and data requests."""
 
     @classmethod
     def https_only(cls) -> bool:

@@ -5,6 +5,7 @@ import re
 import subprocess
 import sys
 import textwrap
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
@@ -26,28 +27,20 @@ from wd_errors import Refused
 from winter_dragon.bot_stats import BotStats, ShardStats, store_snapshot
 from winter_dragon.cogs import import_cogs
 from winter_dragon.cogs.fuel import CarFuels, FuelPreferences, FuelUnits, member_units
-
-
-from winter_dragon.cogs.fuel import CarFuels
-from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
-from winter_dragon.cogs.team import service as team_service
-from winter_dragon.cogs.team.models import TeamKind
-
-
-
-
 from winter_dragon.cogs.hangman.models import HangmanGame, HangmanParticipant, HangmanStatus
+from winter_dragon.cogs.percentage import CompatibilityCheck, calculate_percentage
 from winter_dragon.cogs.reminder import cog as reminder_cog
 from winter_dragon.cogs.reminder.cog import Reminders
 from winter_dragon.cogs.reminder.domain import Reminder, TimedReminder
 from winter_dragon.cogs.steam.models import SaleNotification
+from winter_dragon.cogs.team import service as team_service
+from winter_dragon.cogs.team.models import TeamKind
 from winter_dragon.cogs.tournament import service as tournaments
-from winter_dragon.cogs.tournament.models import TeamMode, Tournament, TournamentStatus, TournamentEntry
-
-
+from winter_dragon.cogs.tournament.models import TeamMode, Tournament, TournamentEntry, TournamentStatus
 from winter_dragon.cogs.urban import Lookup
 from winter_dragon.web import auth, bot_status, pages, profile
 from winter_dragon.web.app import create_app
+from winter_dragon.web.discord_oauth import Granted
 from winter_dragon.web.formatting import plural, span
 from winter_dragon.web.profile_pages import reminders
 from winter_dragon.web.profile_pages.reminders import ReminderDraft, Repeat
@@ -89,8 +82,8 @@ def client(bind: Engine, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 
 
 def _sign_in(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def granted(code: str) -> User | None:
-        return USER if code == "granted" else None
+    async def granted(code: str) -> Granted | None:
+        return Granted(USER, frozenset()) if code == "granted" else None
 
     monkeypatch.setattr(auth, "signed_in_user", granted)
     login = client.get("/auth/discord/login", follow_redirects=False)
@@ -159,6 +152,49 @@ def test_the_signpost_says_what_a_member_will_find(client: TestClient, bind: Eng
     assert "2 entries" in page
 
 
+RIOT_NOTICE = (
+    "Winter Dragon isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone "
+    "officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are "
+    "trademarks or registered trademarks of Riot Games, Inc."
+)
+
+
+@pytest.mark.parametrize(("path", "heading"), [("/privacy", "Privacy policy"), ("/tos", "Terms of service")])
+def test_the_legal_pages_open_without_signing_in(client: TestClient, path: str, heading: str) -> None:
+    page = client.get(path)
+
+    assert page.status_code == 200
+    assert f'<h1 class="page-title">{heading}</h1>' in page.text
+    assert "mailto:privacy@herogold.nl" in page.text
+    assert "github.com/HEROgold/Winter-Dragon-Bot/issues" in page.text
+
+
+def test_the_privacy_policy_names_who_runs_the_bot_and_who_else_sees_the_data(client: TestClient) -> None:
+    text = html.unescape(client.get("/privacy").text)
+
+    assert "run by one person, HEROgold, in the Netherlands" in text
+    for party in ("<td>Hetzner</td>", "<td>Discord</td>", "<td>Riot Games</td>", "<td>Sentry</td>", "<td>Google Fonts</td>"):
+        assert party in text
+    assert "purged 30 days later" in text
+    assert "Linking an account is consent" in text
+    assert "lodge a complaint" in text
+    assert "Autoriteit Persoonsgegevens" in text
+
+
+@pytest.mark.parametrize(("path", "term"), [("/privacy", "PUUID"), ("/privacy", "Purged"), ("/tos", "As is")])
+def test_the_legal_pages_explain_their_terms(client: TestClient, path: str, term: str) -> None:
+    assert f"<dt>{term}</dt>" in client.get(path).text
+
+
+@pytest.mark.parametrize("path", ["/", "/privacy", "/tos", "/me"])
+def test_every_page_links_the_legal_pages_and_carries_riot_s_notice(member: TestClient, path: str) -> None:
+    text = html.unescape(member.get(path).text)
+
+    assert 'href="/privacy"' in text
+    assert 'href="/tos"' in text
+    assert RIOT_NOTICE in text
+
+
 def test_a_page_that_needs_sign_in_sends_you_to_sign_in(client: TestClient) -> None:
     page = client.get("/me", follow_redirects=False)
     fragment = client.get("/me", headers=HTMX, follow_redirects=False)
@@ -168,7 +204,7 @@ def test_a_page_that_needs_sign_in_sends_you_to_sign_in(client: TestClient) -> N
 
 
 def test_signing_in_needs_the_state_it_was_sent_with(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
-    async def never(_code: str) -> User | None:
+    async def never(_code: str) -> Granted | None:
         pytest.fail("a forged callback must not reach Discord")
 
     monkeypatch.setattr(auth, "signed_in_user", never)
@@ -202,7 +238,6 @@ def test_the_signed_in_account_keeps_its_discord_id_as_a_snowflake_through_the_s
 
 def test_the_oauth_access_token_is_a_token_hidden_from_repr() -> None:
     from wd_discord import Token
-
     from wd_discord.oauth import AccessToken
 
     granted = AccessToken.model_validate(
@@ -443,7 +478,9 @@ async def test_the_dashboard_and_the_reminder_command_accept_and_refuse_the_same
     cog = detached_cog(Reminders, engine=bot_engine, client=discord_client)
 
     response = member.post(
-        "/profile/reminders", data={"csrf_token": _csrf(member), "content": content, **form_time}, headers=HTMX
+        "/profile/reminders",
+        data={"csrf_token": _csrf(member), "content": content, **form_time},
+        headers=HTMX,
     )
     options = [InteractionDataOption(name="reminder", type=3, value=content)]
     options += [InteractionDataOption(name=unit, type=4, value=amount) for unit, amount in command_time.items()]
@@ -546,6 +583,54 @@ def test_every_profile_tab_opens_its_page_with_the_tab_marked(member: TestClient
 
         assert response.status_code == 200
         assert f'href="{href}" aria-current="page"' in response.text
+
+
+def _tabs(member: TestClient) -> list[tuple[str, bool]]:
+    """Return the Profile's tabs in order, each as its slug and whether it is dimmed."""
+    subnav = re.search(r'<nav class="subnav".*?</nav>', member.get("/profile").text, re.DOTALL)
+    assert subnav is not None
+    return [
+        (slug, "is-unused" in attributes)
+        for slug, attributes in re.findall(r'<a href="/profile/([^"]*)"([^>]*)>', subnav.group(0))
+    ]
+
+
+def test_profile_tabs_without_anything_for_you_come_last_and_are_dimmed(member: TestClient) -> None:
+    tabs = _tabs(member)
+
+    in_use = [slug for slug, dimmed in tabs if not dimmed]
+    assert in_use == ["incremental", "reminders"]  # useful when empty
+    assert [slug for slug, _ in tabs][: len(in_use)] == in_use
+    assert {"love", "fuel", "steam", "urban", "hangman", "teams"} <= {slug for slug, dimmed in tabs if dimmed}
+
+
+def test_a_profile_tab_with_your_data_moves_forward_and_is_not_dimmed(member: TestClient, bind: Engine) -> None:
+    seed(bind, _check(7, "Someone"))
+
+    tabs = _tabs(member)
+
+    assert ("love", False) in tabs
+    assert tabs.index(("love", False)) < tabs.index(("fuel", True))
+
+
+def test_a_failing_used_check_leaves_the_profile_working_and_its_tab_in_use(
+    member: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def broken(session: Session, context: profile.ProfileContext) -> bool:
+        raise RuntimeError
+
+    page = next(page for page in profile.profile_pages() if page.slug == "love")
+    monkeypatch.setitem(profile._pages, "love", replace(page, used=broken))  # noqa: SLF001
+
+    assert member.get("/profile/fuel").status_code == 200
+    assert ("love", False) in _tabs(member)
+
+
+def test_the_profile_tab_of_the_page_you_are_on_is_not_dimmed(member: TestClient) -> None:
+    text = member.get("/profile/love").text
+
+    assert 'href="/profile/love" aria-current="page"' in text
 
 
 def test_the_profile_shows_its_intro_on_a_first_visit(member: TestClient) -> None:
@@ -700,7 +785,13 @@ def _hangman_game(
 ) -> None:
     finished = None if status is HangmanStatus.ACTIVE else NOW - timedelta(days=days_ago)
     game = HangmanGame(
-        guild_id=1, channel_id=2, word=word, letters=letters, wrong_words=wrong_words, status=status, finished_at=finished
+        guild_id=1,
+        channel_id=2,
+        word=word,
+        letters=letters,
+        wrong_words=wrong_words,
+        status=status,
+        finished_at=finished,
     )
     with Session(bind) as session:
         session.add(game)
@@ -862,7 +953,12 @@ def _enter_tournaments(bind: Engine, team_name: str, tournaments: tuple[tuple[st
         assert team.id is not None
         for name, status, won in tournaments:
             tournament = Tournament(
-                guild_id=1, organiser_id=OTHER_ID, name=name, mode=TeamMode.CAPTAINS, team_size=2, status=status
+                guild_id=1,
+                organiser_id=OTHER_ID,
+                name=name,
+                mode=TeamMode.CAPTAINS,
+                team_size=2,
+                status=status,
             )
             session.add(tournament)
             session.commit()

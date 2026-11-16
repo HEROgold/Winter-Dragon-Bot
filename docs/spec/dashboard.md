@@ -6,6 +6,7 @@ A website where members manage what the bot does for them, and guild admins conf
 
 - Members sign in with Discord (OAuth2). The callback sets an HttpOnly session cookie; the browser never holds a token. Every form that changes something is protected against cross-site requests.
 - A **guild admin** is whoever has Discord's Manage Server permission in a guild, as Discord reports it at sign-in; server settings show only guilds where the member is one and the bot is present.
+- Wherever a page names a user, channel, role or server, the name links to a **card** for it. A card shows only what the member could already see in Discord or in Winter Dragon's own records, and opens only for a server the member and the bot are both in.
 - The **bot owner** sees the owner panel; nobody else does.
 - **Tournament organisers** see the controls of their tournament's live match.
 - Every text says **server**, never guild.

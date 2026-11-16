@@ -33,7 +33,7 @@ async def main() -> None:
     # injects `token` into kwargs at call time - real, but not reflected in its type
     # signature, so `token` still looks required here.
     Sentry()
-    await bot.start()  # ty: ignore[invalid-await, missing-argument]
+    await bot.start()  # ty: ignore[missing-argument]
 
 
 if __name__ == "__main__":

@@ -4,10 +4,10 @@ from datetime import timedelta
 from typing import Annotated
 lazy from typing import TYPE_CHECKING, override
 
-from sqlmodel import Session
+from sqlmodel import Session, col
 from wd_bot.commands import Describe, Length, Lookup
 lazy from wd_bot.cogs import Cog, GroupCog
-lazy from wd_db.extension.lifecycle import alive, create_or_restore, soft_delete
+lazy from wd_db.extension._herogold import Repository
 lazy from wd_discord import AutocompleteInteraction, is_network_error
 lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused
@@ -51,6 +51,14 @@ async def send_reminder(client: Client, reminder: AnyReminder) -> bool:
     return not is_network_error(message)
 
 
+def delete_reminder(session: Session, reminder: AnyReminder) -> None:
+    """Soft-delete ``reminder`` through the repository of its table; the caller commits."""
+    if isinstance(reminder, TimedReminder):
+        Repository[TimedReminder](session).delete(reminder)
+    else:
+        Repository[Reminder](session).delete(reminder)
+
+
 class Reminders(GroupCog, name="reminder", description="Set reminders for yourself"):
     """Stores reminders and DMs them to their users when due, from a background task."""
 
@@ -67,25 +75,33 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
     async def send_due(self, now: datetime) -> int:
         """DM every reminder due at ``now``; soft-delete one-off ones and move repeating ones on. Return how many were due.
 
-        A reminder that couldn't be delivered is handled the same way, rather than retried every check forever.
+        The due reminders are read in one scope. Each is then DMed with no session open and settled in its own short
+        scope, so a crash repeats at most the DM in flight instead of every DM of the run. A reminder that couldn't be
+        delivered is handled the same way, rather than retried every check forever.
         """
-        due = 0
-        with Session(self.bind) as session:
-            for reminder in session.exec(alive(Reminder).where(Reminder.timestamp <= now)).all():
-                await self._deliver(reminder)
-                soft_delete(session, reminder)
+        with Session(self.engine) as session:
+            due: list[AnyReminder] = [
+                *Repository[Reminder](session).qs().where(col(Reminder.timestamp) <= now).all(),
+                *Repository[TimedReminder](session).qs().where(col(TimedReminder.timestamp) <= now).all(),
+            ]
+        for reminder in due:
+            await self._deliver(reminder)
+            with Session(self.engine) as session:
+                self._settle(session, reminder, now)
                 session.commit()
-                due += 1
-            for timed in session.exec(alive(TimedReminder).where(TimedReminder.timestamp <= now)).all():
-                await self._deliver(timed)
-                if timed.repeat_every > timedelta(0):
-                    timed.timestamp = next_occurrence(timed.timestamp, timed.repeat_every, now)
-                    session.add(timed)
-                else:
-                    soft_delete(session, timed)
-                session.commit()
-                due += 1
-        return due
+        return len(due)
+
+    @staticmethod
+    def _settle(session: Session, delivered: AnyReminder, now: datetime) -> None:
+        """Soft-delete the delivered reminder, or move a repeating one to its next time; it may be gone already."""
+        stored = session.get(type(delivered), delivered.id)
+        if stored is None or stored.deleted_at is not None:
+            return
+        if isinstance(stored, TimedReminder) and stored.repeat_every > timedelta(0):
+            stored.timestamp = next_occurrence(stored.timestamp, stored.repeat_every, now)
+            session.add(stored)
+        else:
+            delete_reminder(session, stored)
 
     async def _deliver(self, reminder: AnyReminder) -> None:
         if not await send_reminder(self.bot.client, reminder):
@@ -96,7 +112,7 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
         due = DiscordTime(reminder.timestamp).with_relative()
         content = reminder.content
         with Session(self.bind) as session:
-            create_or_restore(session, reminder)
+            session.add(reminder)
             session.commit()
         repeat = " and then every so often" if isinstance(reminder, TimedReminder) else ""
         message = f"On {due}{repeat} I will remind you of\n`{content}`\nUse {self.mention(self.remove)} to cancel it."
@@ -177,6 +193,6 @@ class Reminders(GroupCog, name="reminder", description="Set reminders for yourse
             raise Refused(msg)
         content = reminder.content
         with Session(self.bind) as session:
-            soft_delete(session, reminder)
+            delete_reminder(session, reminder)
             session.commit()
         await interaction.respond(embeds=[DeletedEmbed(description=f"Removed your reminder of\n`{content}`")], ephemeral=True)

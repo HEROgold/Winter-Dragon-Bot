@@ -52,7 +52,7 @@ Application-wide settings.
 ## `winter_dragon.config_migration` — `src/winter_dragon/config_migration.py`
 Where every section of the old single ``config.ini`` lives now, and the startup step that moves it there.
 
-- module names: MOVES
+- module names: MOVES, BACKUP_DIR
 - `migrate_legacy_config() -> MigrationReport | None` — Move the old single ``config.ini`` into the per-scope files, logging what moved and what was dropped.
 
 ## `winter_dragon.event_logger` — `src/winter_dragon/event_logger.py`

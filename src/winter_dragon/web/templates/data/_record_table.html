@@ -1,8 +1,6 @@
-<table class="table">
-  <thead><tr>{% for column in table.columns %}<th>{{ column }}</th>{% endfor %}</tr></thead>
-  <tbody>
-    {% for row in table.rows %}
-      <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
-    {% endfor %}
-  </tbody>
-</table>
+{% from "_components.html" import table as data_table %}
+{% call data_table(table.columns) %}
+  {% for row in table.rows %}
+    <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
+  {% endfor %}
+{% endcall %}

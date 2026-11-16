@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlmodel import Session
 from wd_bot.testing import detached_cog
 from wd_db.extension.lifecycle import alive
@@ -326,3 +326,36 @@ async def test_reminders_in_old_tables_still_work_after_load(
     assert _embed(discord_client)["color"] == int(Settings.created_color)
     assert await cog.send_due(NOW + timedelta(days=2)) == 1
     assert _sent(client)[-1] == reminder_message("stretch")
+
+
+async def test_no_connection_is_held_while_a_reminder_is_dmed(engine: Engine, monkeypatch: pytest.MonkeyPatch) -> None:
+    held = peak = 0
+    waiting: list[int] = []
+
+    @event.listens_for(engine, "checkout")
+    def _checked_out(*_: object) -> None:
+        nonlocal held, peak
+        held += 1
+        peak = max(peak, held)
+
+    @event.listens_for(engine, "checkin")  # codespell:ignore checkin
+    def _checked_in(*_: object) -> None:
+        nonlocal held
+        held -= 1
+
+    async def probed(client: object, reminder: object) -> bool:
+        waiting.append(held)
+        return True
+
+    monkeypatch.setattr(module, "send_reminder", probed)
+    seed(
+        engine,
+        Reminder(content="once", user_id=ASKER_ID, timestamp=NOW - timedelta(minutes=1)),
+        TimedReminder(content="water", user_id=ASKER_ID, timestamp=NOW, repeat_every=timedelta(days=1)),
+    )
+    cog, _client = _cog(engine)
+
+    assert await cog.send_due(NOW) == 2
+
+    assert peak >= 1  # the counter sees the scopes' own connections, so zero while waiting means something
+    assert waiting == [0, 0]

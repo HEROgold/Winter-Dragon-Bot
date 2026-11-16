@@ -125,11 +125,11 @@ class UrbanDictionary(LoggerMixin):
 
     async def define(self, term: str) -> list[Definition] | LookupFailed:
         """Return the definitions of ``term``, best first; empty when it has none."""
-        return await self._definitions(DEFINE_URL, {"term": term})  # pyrefly: ignore[not-async] - herogold's with_known_exception lacks an async overload
+        return await self._definitions(DEFINE_URL, {"term": term})
 
     async def random(self) -> list[Definition] | LookupFailed:
         """Return a handful of definitions of random terms."""
-        return await self._definitions(RANDOM_URL, {})  # pyrefly: ignore[not-async] - herogold's with_known_exception lacks an async overload
+        return await self._definitions(RANDOM_URL, {})
 
     @with_known_exception(LookupFailed)
     async def _definitions(self, url: str, params: dict[str, str]) -> list[Definition]:

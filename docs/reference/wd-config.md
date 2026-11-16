@@ -70,7 +70,7 @@ Raised when it's detected that WinterDragon is launched for the first time.
 ## `wd_config.migration` — `wd-config/src/wd_config/migration.py`
 The one-off migration of an old ini file whose sections now belong to other scopes.
 
-- `migrate(legacy: Path, moves: Iterable[Move]) -> MigrationReport | None` — Migrate ``legacy`` by ``moves``; ``None`` when it holds nothing to move or drop (or doesn't exist).
+- `migrate(legacy: Path, moves: Iterable[Move], backup_dir: Path | None=None) -> MigrationReport | None` — Migrate ``legacy`` by ``moves``; ``None`` when it holds nothing to move or drop (or doesn't exist).
 
 ### `@dataclass class Move`
 Where the keys of one legacy section go.

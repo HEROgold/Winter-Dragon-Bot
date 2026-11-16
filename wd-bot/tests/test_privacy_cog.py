@@ -19,10 +19,10 @@ from wd_discord.resources.user import User
 from wd_discord.snowflake import Snowflake
 from wd_discord.testing import GUILD_JSON, RecordingClient, user_json
 
-from winter_dragon.cogs.privacy import cog as privacy
 from winter_dragon.cogs.auto_reassign import AutoReassign, AutoReassignGuild, RememberedRole, is_enabled, remembered_roles
 from winter_dragon.cogs.autochannel import AutoChannel, AutoChannelHub, AutoChannelSettings, hub_of, owned_channel, settings_of
 from winter_dragon.cogs.fuel import CarFuels
+from winter_dragon.cogs.privacy import cog as privacy
 from winter_dragon.cogs.privacy.cog import Privacy
 from winter_dragon.cogs.privacy.domain import DeletionStep, UsageCount, hide_member_data
 from winter_dragon.cogs.reminder.cog import Reminders
@@ -31,9 +31,8 @@ from winter_dragon.cogs.stats import PeakOnline, StatChannel, StatKind, guild_st
 from winter_dragon.cogs.steam.models import SaleTypes, SteamSale, SteamSaleProperties, SteamUsers
 from winter_dragon.cogs.steam.store import SteamSaleStore
 from winter_dragon.cogs.team import service as team_service
+from winter_dragon.cogs.team.models import Team, TeamKind, TeamOrigin
 from winter_dragon.cogs.tournament import service as tournaments
-from winter_dragon.member_hidden import MemberHiddenHook
-from winter_dragon.web.records import member_records
 from winter_dragon.cogs.tournament.models import (
     EntryPlayer,
     MatchLineup,
@@ -41,11 +40,12 @@ from winter_dragon.cogs.tournament.models import (
     MatchVote,
     TeamMode,
     Tournament,
+    TournamentEntry,
     TournamentMatch,
     TournamentStatus,
-    TournamentEntry,
-    TournamentSignup,
 )
+from winter_dragon.member_hidden import MemberHiddenHook
+from winter_dragon.web.records import member_records
 
 
 if TYPE_CHECKING:
@@ -748,3 +748,26 @@ async def test_the_data_page_lists_rows_a_deletion_request_anonymises(engine: En
     seed(engine, AnonymisedScore(player_id=MEMBER_ID))
 
     assert AnonymisedScore in [record.model for record in member_records(engine, Snowflake(MEMBER_ID))]
+
+
+async def test_a_finished_tournament_and_its_winning_entry_are_purged_together() -> None:
+    engine = sqlite_engine(foreign_keys=True)
+    with Session(engine) as session:
+        tournament = Tournament(guild_id=1, organiser_id=2, name="Cup", mode=TeamMode.SOLO, team_size=1)
+        team = Team(name="A", kind=TeamKind.TEMPORARY, origin=TeamOrigin.SOLO_TOURNAMENT)
+        session.add_all([tournament, team])
+        session.flush()
+        entry = TournamentEntry(tournament_id=tournament.id or 0, team_id=team.id or 0, name="A")
+        session.add(entry)
+        session.flush()
+        tournament.winner_entry_id = entry.id  # the tournament points at its entry, and the entry at its tournament
+        for row in (entry, tournament, team):
+            row.deleted_at = DAY_0
+        session.commit()
+
+    await _cog(engine).purge(_day(31))
+
+    with Session(engine) as session:
+        assert session.exec(select(Tournament)).all() == []
+        assert session.exec(select(TournamentEntry)).all() == []
+        assert session.exec(select(Team)).all() == []

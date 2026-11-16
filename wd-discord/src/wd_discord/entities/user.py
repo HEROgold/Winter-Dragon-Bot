@@ -7,11 +7,16 @@ lazy from wd_discord.client import is_network_error
 lazy from wd_discord.entities.base import ClientBound, Entity, EntityStore, Partial
 lazy from wd_discord.entities.channel import Channel
 lazy from wd_discord.resources.channel import Channel as ChannelModel
+lazy from wd_discord.resources.guild.user_guild import UserGuild as UserGuildModel
 lazy from wd_discord.resources.user import User as UserModel
 
 
+MAX_GUILDS_PER_PAGE = 200
+"""Most guilds Discord returns from one ``GET /users/@me/guilds`` request."""
+
+
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Generator, Sequence
 
     from wd_discord.client import NetworkError
     from wd_discord.components import MessageComponent
@@ -120,9 +125,47 @@ class PartialUser(BaseUser, Partial[User]):
     """A user known only by ID."""
 
 
+class UserGuild(Entity[UserGuildModel]):
+    """A guild in the list of the user behind the client's token, with the permissions they hold there."""
+
+    @property
+    def id(self) -> Snowflake:
+        """The guild's ID."""
+        return self.model.id
+
+    @property
+    def name(self) -> str:
+        """The guild's name."""
+        return self.model.name
+
+    @property
+    def is_owner(self) -> bool:
+        """Whether the user owns the guild."""
+        return self.model.owner
+
+
 @dataclass(frozen=True)
 class UserStore(EntityStore[PartialUser]):
     """Users the client can see."""
+
+    async def guilds(self) -> Generator[UserGuild] | NetworkError:
+        """GET /users/@me/guilds - every guild the user behind the client's token is in.
+
+        A bot token lists the bot's guilds; a bearer token needs the ``guilds`` scope. Reads the pages of 200 one
+        after the other, so a failure on any page is the failure returned.
+        """
+        found: list[UserGuild] = []
+        while True:
+            params = {"limit": str(MAX_GUILDS_PER_PAGE)}
+            if found:
+                params["after"] = str(found[-1].id)
+            page = self._entities(await self.client.get(t"/users/@me/guilds", params=params), UserGuildModel, UserGuild)
+            if is_network_error(page):
+                return page
+            batch = list(page)
+            found.extend(batch)
+            if len(batch) < MAX_GUILDS_PER_PAGE:
+                return (guild for guild in found)
 
     async def me(self) -> CurrentUser | NetworkError:
         """GET /users/@me - the user behind the client's token; the client's cache keeps it."""

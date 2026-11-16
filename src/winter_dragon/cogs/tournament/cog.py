@@ -88,6 +88,7 @@ lazy from .service import (
     remove_player,
     report,
     roster,
+    rosters_of,
     sign_up,
     signups_of,
     start,
@@ -273,7 +274,9 @@ class Tournaments(
     @staticmethod
     def _participants(session: Session, tournament: Tournament) -> tuple[dict[str, list[Snowflake]], list[Snowflake]]:
         """Return each team's players by team name, and the players signed up alone."""
-        rosters = {entry.name: roster(session, entry) for entry in entries_of(session, tournament) if entry.id is not None}
+        entries = [entry for entry in entries_of(session, tournament) if entry.id is not None]
+        by_id = rosters_of(session, entries)
+        rosters = {entry.name: by_id[entry.id or 0] for entry in entries}
         solo = [Snowflake(signup.user_id) for signup in signups_of(session, tournament)]
         return rosters, solo
 
@@ -353,13 +356,19 @@ class Tournaments(
             session.add(tournament)
             session.flush()
             shown, files = self._card(session, tournament)
-            sent = unwrap(
-                await self.bot.client.channels.partial(interaction.channel.id).send(components=[shown], files=files),
-                "I couldn't post the tournament here.",
-            )
-            add_post(session, tournament, interaction.channel.id, sent.id)
+            tournament_id, tournament_name = tournament.id or 0, tournament.name
             session.commit()
-            tournament_name = tournament.name
+        # The tournament is stored before its card is sent, so no session waits on Discord. A failed send leaves it
+        # open without a post, and /tournament post adds one.
+        msg = f"I opened the tournament, but couldn't post it here. Use {self.mention(self.post_tournament)} to post it."
+        sent = unwrap(
+            await self.bot.client.channels.partial(interaction.channel.id).send(components=[shown], files=files),
+            msg,
+        )
+        with Session(self.bind) as session:
+            stored_tournament = stored(session, Tournament, tournament_id, "This tournament is gone.")
+            add_post(session, stored_tournament, interaction.channel.id, sent.id)
+            session.commit()
         await interaction.followup(
             embeds=[CreatedEmbed(description=f"**{tournament_name}** is open for sign-up.")],
             ephemeral=True,
@@ -380,13 +389,15 @@ class Tournaments(
         with Session(self.bind) as session:
             found = self._tournament(interaction, session, tournament)
             shown, files = self._card(session, found)
-            sent = unwrap(
-                await self.bot.client.channels.partial(interaction.channel.id).send(components=[shown], files=files),
-                "I couldn't post the tournament here.",
-            )
-            add_post(session, found, interaction.channel.id, sent.id)
+            tournament_id, tournament_name = found.id or 0, found.name
+        sent = unwrap(
+            await self.bot.client.channels.partial(interaction.channel.id).send(components=[shown], files=files),
+            "I couldn't post the tournament here.",
+        )
+        with Session(self.bind) as session:
+            stored_tournament = stored(session, Tournament, tournament_id, "This tournament is gone.")
+            add_post(session, stored_tournament, interaction.channel.id, sent.id)
             session.commit()
-            tournament_name = found.name
         await interaction.followup(embeds=[CreatedEmbed(description=f"Posted **{tournament_name}** here.")], ephemeral=True)
 
     @Cog.command(name="join", description="Sign up for a tournament")
@@ -467,6 +478,8 @@ class Tournaments(
     async def enter_button(self, interaction: GuildComponentInteraction, tournament_id: str) -> None:
         """Enter the clicker's team; with more than one team they could enter, ask which first."""
         user_id = interaction.user.id
+        picker: Container | None = None
+        name = ""
         with Session(self.bind) as session:
             tournament = self._open_signup(session, interaction, tournament_id)
             entered = {entry.team_id for entry in entries_of(session, tournament)}
@@ -498,8 +511,10 @@ class Tournaments(
                     placeholder="Choose a team",
                 )
                 prompt = block(f"Pick the team to enter into **{tournament.name}**. You'll be its first player.")
-                await interaction.respond(components=[card(Tone.ACT, prompt, ActionRow(components=[select]))], ephemeral=True)
-                return
+                picker = card(Tone.ACT, prompt, ActionRow(components=[select]))
+        if picker is not None:
+            await interaction.respond(components=[picker], ephemeral=True)
+            return
         await interaction.respond(embeds=[CreatedEmbed(description=f"**{name}** is entered.")], ephemeral=True)
         await self._refresh_posts(int(tournament_id))
 

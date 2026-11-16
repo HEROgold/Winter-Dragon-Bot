@@ -59,6 +59,7 @@ def _read_ini(path: Path) -> dict[str, dict[str, str]]:
 def boot(directory: Path, code: str, *, files: Mapping[str, str] | None = None) -> Boot:
     """Write `files` into `directory`, run `code` there in a fresh interpreter and collect the outcome."""
     for name, contents in (files or {}).items():
+        (directory / name).parent.mkdir(parents=True, exist_ok=True)
         (directory / name).write_text(contents, encoding="utf-8")
     script = f"{textwrap.dedent(code)}\nimport json\nprint({_MARKER!r} + json.dumps(result))\n"
     # -I keeps the temp directory and PYTHON* env vars off sys.path; the venv's packages still load.

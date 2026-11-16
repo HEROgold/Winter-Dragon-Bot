@@ -42,7 +42,7 @@ def _stub_wd_db_engine() -> None:
     """Install a sqlite-backed wd_db.constants stub before anything imports the real one."""
     # Instead update DbUrl from wd_db.db to point to a local sqlite database.
     stub = types.ModuleType("wd_db.constants")
-    stub.engine = create_engine("sqlite://")
+    stub.engine = create_engine("sqlite://")  # ty: ignore[unresolved-attribute] - a fresh ModuleType
     sys.modules["wd_db.constants"] = stub
 
 
@@ -65,7 +65,7 @@ async def main() -> int:
             # bot.start() is decorated with @BotConfig.with_kwarg("Tokens", "discord_token", name="token"),
             # reading bot.ini, which injects `token` into kwargs at call time - real, but not reflected in its type
             # signature, so `token` still looks required here.
-            await asyncio.wait_for(bot.start(), timeout=RUN_DURATION_SECONDS)  # ty: ignore[invalid-argument-type, missing-argument]
+            await asyncio.wait_for(bot.start(), timeout=RUN_DURATION_SECONDS)  # ty: ignore[missing-argument]
         except TimeoutError:
             pass
         else:

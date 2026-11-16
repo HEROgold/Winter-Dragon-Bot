@@ -3,9 +3,15 @@
 {% block title %}Something went wrong · {% endblock %}
 
 {% block main %}
-<main class="page">
+<main class="page" id="main">
   <h1 class="page-title">Something went wrong</h1>
   <p class="page-lead">{{ message }}</p>
-  <p><a class="button button-primary" href="/auth/discord/login">Sign in with Discord</a></p>
+  <p>
+    {% if account %}
+      <a class="button button-primary" href="/">Back to the home page</a>
+    {% else %}
+      <a class="button button-primary" href="/auth/discord/login">Sign in with Discord</a>
+    {% endif %}
+  </p>
 </main>
 {% endblock %}

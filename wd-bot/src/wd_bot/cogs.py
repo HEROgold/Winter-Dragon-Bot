@@ -47,7 +47,7 @@ def command(
     apply instead. ``requires`` lists permissions the invoker must hold, checked by wd-bot
     before the handler runs; use it for a subcommand needing more than its group.
     """
-    # TODO: By defult, when name isn't specified, user the method name.
+    # TODO: By default, when name isn't specified, user the method name.
     # TODO: When description isn't specified, use the first line of the docstring. (configurable in .ini)
 
     def decorator(func: Callable[..., Awaitable[None]]) -> Command:
@@ -242,6 +242,11 @@ class Cog(LoggerMixin):
     def bind(self) -> Engine | Connection:
         """The database the cog's injected session connects to; open short-lived sessions on it per operation."""
         return self.session.get_bind()
+
+    @property
+    def engine(self) -> Engine:
+        """The engine behind :attr:`bind`, for scopes: ``SteamSaleStore.begin(self.engine)``."""
+        return self.bind.engine
 
     def create_tables(self, *models: type[SQLModel]) -> None:
         """Make sure the tables of ``models`` exist in :attr:`bind`; see :func:`wd_db.schema.ensure_tables`.

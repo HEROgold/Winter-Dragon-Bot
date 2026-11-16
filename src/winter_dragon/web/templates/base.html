@@ -1,3 +1,4 @@
+{% from "_components.html" import avatar %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -15,6 +16,7 @@
   </script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <a class="wordmark" href="/">Winter Dragon</a>
     {% if account %}
@@ -24,12 +26,8 @@
         {% if bot_owner %}<a href="/bot" {% if active == "bot" %}aria-current="page"{% endif %}>Bot stats</a>{% endif %}
       </nav>
       <div class="account">
-        {% if account.avatar_url %}
-          <img class="avatar" src="{{ account.avatar_url }}" alt="">
-        {% else %}
-          <span class="avatar" aria-hidden="true">{{ account.initials }}</span>
-        {% endif %}
-        {{ account.display_name }}
+        {{ avatar(account) }}
+        <span class="account-name">{{ account.display_name }}</span>
         <form method="post" action="/auth/logout" class="sign-out">
           <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
           <button class="button button-quiet button-small" type="submit">Sign out</button>
@@ -47,8 +45,11 @@
   {% block main %}{% endblock %}
 
   <footer class="site-footer">
-    <a href="/">Winter Dragon</a>
-    {% if account %}<a href="/me">Your data</a>{% endif %}
+    <nav aria-label="Legal">
+      <a href="/privacy">Privacy policy</a>
+      <a href="/tos">Terms of service</a>
+    </nav>
+    <p class="riot-notice">Winter Dragon isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
   </footer>
 </body>
 </html>

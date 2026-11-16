@@ -27,6 +27,7 @@ class OAuthScopes(StrEnum):
 
     IDENTIFY = "identify"
     EMAIL = "email"
+    GUILDS = "guilds"
     PREMIUM = "premium"
 
     def __or__(self, other: OAuthScopes | str) -> str:

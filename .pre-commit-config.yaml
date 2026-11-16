@@ -123,9 +123,9 @@ repos:
         files: ^((src|wd-[a-z]+/src)/.*\.pyi?|pyrefly\.toml|pyrefly-baseline\.json)$
         stages: [pre-commit, pre-push]
       - id: ty-check
-        name: uvx ty check
+        name: uvx ty check src
         language: system
-        entry: uvx ty check
+        entry: uvx ty check src
         pass_filenames: false
         files: ^src/.*\.py$
         stages: [pre-push]

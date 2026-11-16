@@ -7,7 +7,7 @@ lazy from sqlmodel import Session
 lazy from wd_db.extension.lifecycle import owned_by
 
 lazy from winter_dragon.cogs.fuel import CarFuels, FuelUnits, graphable, member_units
-lazy from winter_dragon.web.profile import ProfileContext, profile_page
+lazy from winter_dragon.web.profile import ProfileContext, has_rows, profile_page
 
 
 if TYPE_CHECKING:
@@ -69,7 +69,7 @@ def efficiency_graph(refuels: Sequence[CarFuels], units: FuelUnits) -> Efficienc
     return EfficiencyGraph(points=points, lowest=lowest, highest=highest, first_day=start, last_day=end)
 
 
-@profile_page(slug="fuel", title="Fuel", template="profile/fuel.html")
+@profile_page(slug="fuel", title="Fuel", template="profile/fuel.html", used=has_rows(CarFuels))
 def fuel(context: ProfileContext) -> dict[str, object]:
     """Return the fuel page's context: the member's refuels, newest first, and their efficiency graph."""
     with Session(context.bind) as session:

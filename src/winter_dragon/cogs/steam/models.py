@@ -6,6 +6,7 @@ lazy from typing import ClassVar
 
 from sqlalchemy import BigInteger
 from sqlmodel import Field
+from wd_db.extension._herogold import Relationship, configure
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership, Through
 from wd_types.clock import utc_now
@@ -34,6 +35,9 @@ class SteamSale(LifecycleModel, table=True):
     sale_end: datetime | None = Field(default=None, sa_type=AwareDateTime)
     """When Steam says the sale ends, if known; the sale is checked again shortly after."""
 
+    properties = Relationship[list["SteamSaleProperties"]]()
+    """The alive :class:`SteamSaleProperties` rows of this sale, over ``steam_sale_id``."""
+
     @property
     def steam_url(self) -> SteamURL:
         """The sale's store page."""
@@ -52,6 +56,8 @@ class SteamSaleProperties(LifecycleModel, table=True):
 
     steam_sale_id: int = Field(foreign_key="steamsale.id", sa_type=BigInteger)
     property: SaleTypes
+
+    sale = Relationship[SteamSale]()
 
 
 class SteamUsers(DiscordKeyedModel, table=True):
@@ -86,3 +92,5 @@ class SaleNotification(LifecycleModel, table=True):
 
 STEAM_TABLES = (SteamSale, SteamSaleProperties, SteamUsers, SaleNotification)
 """Every table the Steam cog creates on load."""
+
+configure(models=STEAM_TABLES)

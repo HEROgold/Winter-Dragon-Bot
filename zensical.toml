@@ -5,6 +5,8 @@ site_author = "HEROgold"
 site_url = "https://herogold.github.io/Winter-Dragon-Bot"
 repo_url = "https://github.com/HEROgold/Winter-Dragon-Bot"
 repo_name = "HEROgold/Winter-Dragon-Bot"
+# Shown in every page's footer: the legal pages live on the dashboard, and Riot asks for its notice on the product's site.
+copyright = """<a href="https://dragon.herogold.nl/privacy">Privacy policy</a> · <a href="https://dragon.herogold.nl/tos">Terms of service</a><br>Winter Dragon isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc."""
 docs_dir = "docs"
 nav = [
   { "Home" = "index.md" },

@@ -28,7 +28,7 @@ Every ``fetch`` and ``fetch_*`` asks Discord. Pass ``reuse_response=True`` to ac
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING, Any, Protocol, TypeAliasType
+lazy from typing import TYPE_CHECKING, Any, Protocol, TypeAliasType, cast
 
 lazy from herogold.errors import with_known_exception
 
@@ -72,7 +72,7 @@ def parse[M: DiscordModel](result: RequestResult, model: type[M]) -> M | Network
     """Return the failure in ``result``, or its JSON body validated as ``model``; an unreadable body is a failure."""
     if is_network_error(result):
         return result
-    parsed = _validate(result, model)
+    parsed = cast("M | ValueError", _validate(result, model))  # herogold 7 types the wrapped call as maybe-async
     return _unreadable(result, model, parsed) if isinstance(parsed, ValueError) else parsed
 
 
