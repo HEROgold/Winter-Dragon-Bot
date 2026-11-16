@@ -25,6 +25,7 @@ lazy from wd_discord.interactions import InteractionContextType
 lazy from wd_discord.resources.guild import MemberParams
 lazy from wd_discord.snowflake import Snowflake
 
+lazy from winter_dragon.data_categories import DataCategory
 lazy from winter_dragon.ui import CreatedEmbed, DeletedEmbed
 
 
@@ -58,6 +59,8 @@ class RememberedRole(LifecycleModel, table=True):
 
 
 AUTO_REASSIGN_TABLES = (AutoReassignGuild, RememberedRole)
+
+DataCategory("Roles on rejoin", AUTO_REASSIGN_TABLES)
 
 
 def is_enabled(session: Session, guild_id: Snowflake) -> bool:

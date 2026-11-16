@@ -297,6 +297,99 @@ def test_the_data_page_lists_the_teams_deleting_your_data_disbands(member: TestC
     assert "started team" not in rows  # leaving a started tournament doesn't disband the team
 
 
+def test_the_data_page_groups_your_records_by_feature(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        CompatibilityCheck(user_id=MEMBER_ID, target_id=OTHER_ID, target_name="Rival"),
+    )
+
+    page = member.get("/me").text
+
+    assert '<input type="checkbox" name="category" value="Reminders">' in page
+    assert '<input type="checkbox" name="category" value="Compatibility checks">' in page
+    assert page.index('value="Compatibility checks"') < page.index('value="Reminders"')  # features by name
+
+
+def test_each_entry_has_a_box_to_tick(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=5, content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)))
+
+    rows = member.get("/me/records/reminder", headers=HTMX).text
+
+    assert 'name="row" value="reminder:5" form="selection"' in rows
+
+
+def _ticked(member: TestClient, path: str, **ticked: list[str]) -> str:
+    return member.post(path, data={"csrf_token": _csrf(member), **ticked}, headers=HTMX).text
+
+
+def test_deleting_a_ticked_feature_asks_first_and_names_what_goes(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(content="one", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        Reminder(content="two", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)),
+    )
+
+    confirm = _ticked(member, "/me/selection/confirm", category=["Reminders"])
+
+    assert "<strong>Reminders</strong>: 2 entries" in confirm
+    assert '<input type="hidden" name="category" value="Reminders">' in confirm
+    assert sorted(_alive_contents(bind)) == ["one", "two"]  # nothing is deleted before confirming
+
+
+def test_deleting_a_ticked_feature_hides_all_of_it_and_nothing_else(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(content="one", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        CompatibilityCheck(user_id=MEMBER_ID, target_id=OTHER_ID, target_name="Rival"),
+    )
+
+    page = _ticked(member, "/me/selection", category=["Reminders"])
+
+    assert "Deleted 1 entry" in page
+    assert _alive_contents(bind) == []
+    with Session(bind) as session:
+        assert len(session.exec(alive(CompatibilityCheck)).all()) == 1
+
+
+def test_deleting_ticked_entries_hides_only_those(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(id=1, content="keep", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        Reminder(id=2, content="drop", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)),
+    )
+
+    _ticked(member, "/me/selection", row=["reminder:2"])
+
+    assert _alive_contents(bind) == ["keep"]
+
+
+def test_ticking_someone_else_s_entry_deletes_nothing(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=1, content="theirs", user_id=OTHER_ID, timestamp=NOW + timedelta(days=1)))
+
+    page = _ticked(member, "/me/selection", row=["reminder:1", "nonsense:x"])
+
+    assert "Deleted 0 entries" in page
+    assert _alive_contents(bind) == ["theirs"]
+
+
+def test_the_confirmation_counts_only_what_deleting_removes(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=1, content="theirs", user_id=OTHER_ID, timestamp=NOW + timedelta(days=1)))
+
+    confirm = _ticked(member, "/me/selection/confirm", row=["reminder:1"])
+
+    assert "Nothing is ticked" in confirm
+
+
+def test_without_htmx_the_confirmation_is_part_of_the_whole_page(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)))
+
+    page = member.post("/me/selection/confirm", data={"csrf_token": _csrf(member), "category": ["Reminders"]}).text
+
+    assert '<h1 class="page-title">Your data</h1>' in page
+    assert "<strong>Reminders</strong>: 1 entry" in page
+
+
 def test_a_record_that_does_not_exist_is_not_found(member: TestClient) -> None:
     assert member.get("/me/records/nonsense").status_code == 404
 

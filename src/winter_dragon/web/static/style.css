@@ -211,6 +211,15 @@ textarea.input { resize: vertical; min-height: 6rem; }
 .page-title:has(+ .page-lead) { margin-bottom: 0.75rem; }
 .page-lead { font-size: var(--step-1); line-height: 1.4; color: var(--slate); max-width: 36rem; margin-bottom: 2rem; }
 
+/* Data page: records grouped by feature, each feature and entry with a box to tick for deleting. */
+
+.feature-group + .feature-group { margin-top: 2rem; }
+.feature-heading { display: flex; align-items: baseline; gap: 1rem; font-size: var(--step-1); margin-bottom: 0.75rem; }
+.feature-choice { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.feature-choice input, .record-body input[type="checkbox"] { width: 1.1rem; height: 1.1rem; accent-color: var(--ember); }
+.selection-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
+.notice { border-inline-start: 3px solid var(--route); padding: 0.5rem 0.75rem; background: var(--paper); margin-bottom: 1.5rem; }
+
 /* Privacy policy and terms of service: long text, so a reading width. */
 
 .legal > :not(.page-title) { max-width: 42rem; }

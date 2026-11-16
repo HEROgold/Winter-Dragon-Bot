@@ -8,6 +8,8 @@ from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership, Through
 
+lazy from winter_dragon.data_categories import DataCategory
+
 
 class IncrementalSave(DiscordKeyedModel, table=True):
     """A member's save; ``id`` is their Discord user ID, and they own it."""
@@ -44,3 +46,6 @@ class SaveGenerator(LifecycleModel, table=True):
 
 INCREMENTAL_TABLES = (IncrementalSave, SaveBalance, SaveGenerator)
 """Every table the Incremental cog creates on load."""
+
+
+DataCategory("Incremental game", INCREMENTAL_TABLES)

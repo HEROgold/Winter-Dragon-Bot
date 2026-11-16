@@ -11,6 +11,7 @@ lazy from wd_db.extension.lifecycle import owned_by
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.data_categories import DataCategory
 
 
 if TYPE_CHECKING:
@@ -58,6 +59,9 @@ type AnyReminder = Reminder | TimedReminder
 
 REMINDER_TABLES = (Reminder, TimedReminder)
 """Every reminder table, which the reminder cog and the dashboard create."""
+
+
+DataCategory("Reminders", REMINDER_TABLES)
 
 
 def _max_delay() -> timedelta:

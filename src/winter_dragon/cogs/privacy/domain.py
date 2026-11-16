@@ -12,17 +12,19 @@ from sqlalchemy import BigInteger
 from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership
-lazy from sqlalchemy import inspect
-lazy from sqlmodel import Session, SQLModel
+lazy from sqlalchemy import inspect, or_
+lazy from sqlmodel import Session, SQLModel, col
 lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive, lifecycle_models, owned_by, soft_delete
 
+lazy from winter_dragon.data_categories import DataCategory
 lazy from winter_dragon.member_hidden import MemberHiddenHook
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Generator, Iterable
+    lazy from collections.abc import Collection, Generator, Iterable, Mapping
 
     lazy from sqlalchemy import Connection, Engine
+    lazy from sqlmodel.sql.expression import SelectOfScalar
     lazy from wd_discord.snowflake import Snowflake
 
 
@@ -104,6 +106,9 @@ PRIVACY_TABLES = (DepartedGuild, DeletionRequest, CommandUsage)
 """Every privacy table, which the privacy cog creates on load."""
 
 
+DataCategory("Command usage", (CommandUsage,))
+
+
 def purge_order(models: Iterable[type[LifecycleModel]]) -> list[type[LifecycleModel]]:
     """Return ``models`` children first: a table that points at another (by foreign key) comes before it."""
     rank = {table.name: index for index, table in enumerate(SQLModel.metadata.sorted_tables)}
@@ -169,6 +174,106 @@ def hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datet
         session.add(request)
         session.commit()
     return True
+
+
+def removable_rows[M: LifecycleModel](
+    model: type[M],
+    member_id: Snowflake,
+    stored: Collection[type[LifecycleModel]],
+) -> SelectOfScalar[M]:
+    """Select the ``model`` rows a deletion request by ``member_id`` removes: owned, hook-removed and anonymised rows."""
+    owned = owned_by(model, member=member_id)
+    hooked = [rows.ids for rows in MemberHiddenHook.removed_by_all(member_id, stored) if rows.model is model]
+    anonymised = [
+        alive(model).where(getattr(model, name) == int(member_id)).with_only_columns(col(model.id)) for name in model.anonymised
+    ]
+    if not hooked and not anonymised:
+        return owned
+    ids = (owned.with_only_columns(col(model.id)), *hooked, *anonymised)
+    return alive(model).where(or_(*(col(model.id).in_(selected) for selected in ids)))
+
+
+def _removable_ids(
+    session: Session,
+    model: type[LifecycleModel],
+    member_id: Snowflake,
+    stored: Collection[type[LifecycleModel]],
+) -> set[int]:
+    """Return the IDs of the ``model`` rows a deletion request by ``member_id`` removes."""
+    return {row.id for row in session.exec(removable_rows(model, member_id, stored)) if row.id is not None}
+
+
+def removable_only(
+    bind: Engine | Connection,
+    member_id: Snowflake,
+    chosen: Mapping[type[LifecycleModel], Collection[int]],
+) -> dict[type[LifecycleModel], set[int]]:
+    """Return ``chosen`` (IDs by table) with only the rows a deletion request by ``member_id`` removes."""
+    stored = stored_models(bind)
+    with Session(bind) as session:
+        kept = {
+            model: _removable_ids(session, model, member_id, stored) & {int(row_id) for row_id in ids}
+            for model, ids in chosen.items()
+            if model in stored
+        }
+    return {model: ids for model, ids in kept.items() if ids}
+
+
+def category_rows(
+    bind: Engine | Connection,
+    member_id: Snowflake,
+    names: Collection[str],
+) -> dict[type[LifecycleModel], set[int]]:
+    """Return the IDs of every row a deletion request by ``member_id`` removes, in the tables of the categories ``names``."""
+    stored = stored_models(bind)
+    with Session(bind) as session:
+        chosen = {
+            model: _removable_ids(session, model, member_id, stored) for model in stored if DataCategory.of(model) in names
+        }
+    return {model: ids for model, ids in chosen.items() if ids}
+
+
+def _anonymise_row(row: LifecycleModel, member_id: Snowflake) -> bool:
+    """Replace ``member_id`` with :data:`~wd_db.extension.lifecycle.DELETED_MEMBER` in ``row``'s anonymised columns.
+
+    Return whether any column named the member.
+    """
+    named = [name for name in row.anonymised if getattr(row, name) == int(member_id)]
+    for name in named:
+        setattr(row, name, DELETED_MEMBER)
+    return bool(named)
+
+
+def hide_member_rows(
+    bind: Engine | Connection,
+    member_id: Snowflake,
+    chosen: Mapping[type[LifecycleModel], Collection[int]],
+    now: datetime,
+) -> int:
+    """Hide the rows ``chosen`` (IDs by table) of the member ``member_id``'s data at ``now``, as a deletion request would.
+
+    Only rows a deletion request by the member removes count; any other ID is ignored, so a member can't hide someone
+    else's data. Each feature's :class:`~winter_dragon.member_hidden.MemberHiddenHook` cleans up the rows it knows
+    first, such as leaving a team, which hands its captaincy over. Of the rest, a row the member doesn't own but whose
+    anonymised column names them keeps living with the member's ID replaced; every other row is soft-deleted, and
+    purged :data:`RETENTION` later. Return how many of the chosen rows were hidden or anonymised.
+    """
+    stored = stored_models(bind)
+    done = 0
+    with Session(bind) as session:
+        for model in purge_order(model for model in chosen if model in stored):
+            ids = _removable_ids(session, model, member_id, stored) & {int(row_id) for row_id in chosen[model]}
+            done += len(ids)
+            ids -= MemberHiddenHook.rows_hidden_all(session, member_id, model, ids, stored)
+            session.flush()
+            owned = {row.id for row in session.exec(owned_by(model, member=member_id).where(col(model.id).in_(ids)))}
+            for row in session.exec(alive(model).where(col(model.id).in_(ids))).all():
+                if row.id in owned or not _anonymise_row(row, member_id):
+                    soft_delete(session, row, at=now)
+                else:
+                    session.add(row)
+        session.commit()
+    return done
 
 
 def deletion_steps(bind: Engine | Connection, member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]:

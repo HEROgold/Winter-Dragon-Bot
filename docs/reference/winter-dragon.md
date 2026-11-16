@@ -55,6 +55,18 @@ Where every section of the old single ``config.ini`` lives now, and the startup 
 - module names: MOVES, BACKUP_DIR
 - `migrate_legacy_config() -> MigrationReport | None` — Move the old single ``config.ini`` into the per-scope files, logging what moved and what was dropped.
 
+## `winter_dragon.data_categories` — `src/winter_dragon/data_categories.py`
+The features a member's data belongs to, as the data page groups it; a feature registers its own tables.
+
+- module names: COGS_PACKAGE
+
+### `@dataclass class DataCategory`
+A feature's name on the data page, and the tables that hold its data; creating one registers it.
+
+- fields: name: str, tables: tuple[type[LifecycleModel], ...]
+- `@staticmethod registered_for(model: type[LifecycleModel]) -> DataCategory | None` — Return the category ``model``'s table is registered under; ``None`` if none.
+- `@staticmethod of(model: type[LifecycleModel]) -> str` — Return the name of the category ``model`` is registered under, else its cog package's name in words.
+
 ## `winter_dragon.event_logger` — `src/winter_dragon/event_logger.py`
 A bot that does nothing but log every frame the Discord gateway sends it.
 
@@ -87,7 +99,9 @@ A feature's own cleanup when a member's data is hidden; defining a subclass regi
 - fields: tables: ClassVar[tuple[type[LifecycleModel], ...]]
 - `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Clean up the member ``member_id``'s data in ``session``, before their owned rows are hidden; don't commit.
 - `@classmethod removes(member_id: Snowflake) -> Generator[RemovedRows]` — Yield the rows :meth:`on_member_hidden` removes that the member ``member_id`` doesn't own; none by default.
+- `@classmethod on_rows_hidden(session: Session, member_id: Snowflake, model: type[LifecycleModel], ids: Collection[int]) -> set[int]` — Clean up the rows ``ids`` of ``model`` the member ``member_id`` chose to delete; don't commit.
 - `@staticmethod run_all(session: Session, member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> None` — Call every registered hook whose :attr:`tables` are all in ``stored``, for the member ``member_id``.
+- `@staticmethod rows_hidden_all(session: Session, member_id: Snowflake, model: type[LifecycleModel], ids: Collection[int], stored: Collection[type[LifecycleModel]]) -> set[int]` — Let every hook whose :attr:`tables` are all in ``stored`` clean up the chosen rows; return the IDs they took.
 - `@staticmethod removed_by_all(member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> Generator[RemovedRows]` — Yield the rows the hooks :meth:`run_all` calls remove for the member ``member_id``, beyond what they own.
 
 ## `winter_dragon.metrics` — `src/winter_dragon/metrics.py`

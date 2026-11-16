@@ -25,6 +25,7 @@ lazy from wd_discord.timestamp import DiscordTime
 lazy from wd_errors import Refused, unwrap
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.data_categories import DataCategory
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed
 
 
@@ -82,6 +83,8 @@ class PeakOnline(DiscordKeyedModel, table=True):
 
 
 STATS_TABLES = (StatChannel, PeakOnline)
+
+DataCategory("Server stats", STATS_TABLES)
 
 
 @dataclass(frozen=True, slots=True)

@@ -9,6 +9,8 @@ from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership
 
+lazy from winter_dragon.data_categories import DataCategory
+
 
 class TeamKind(StrEnum):
     """Whether a team was drawn for one occasion or is kept."""
@@ -50,3 +52,5 @@ class TeamMember(LifecycleModel, table=True):
 
 
 TEAM_TABLES = (Team, TeamMember)
+
+DataCategory("Teams", TEAM_TABLES)

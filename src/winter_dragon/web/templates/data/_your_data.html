@@ -1,18 +1,39 @@
 <div id="your-data">
-  {% if records %}
-    <div class="records">
-      {% for record in records %}
-        {# each body loads the first time it's opened #}
-        <details class="record" hx-get="/me/records/{{ record.key }}" hx-trigger="toggle once" hx-target="#record-{{ record.key }}">
-          <summary>
-            <span class="record-name">{{ record.name }}</span>
-            <span class="secondary">{{ record.summary }}</span>
-            <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
-          </summary>
-          <div class="record-body" id="record-{{ record.key }}"><p class="secondary">Loading…</p></div>
-        </details>
+  {% if notice %}<p class="notice" role="status">{{ notice }}</p>{% endif %}
+  {% if groups %}
+    {# Tick whole features or single entries, then confirm what deleting them removes below the list. #}
+    <form id="selection" method="post" action="/me/selection/confirm" hx-post="/me/selection/confirm" hx-target="#selection-confirm">
+      <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+      {% for group in groups %}
+        <section class="feature-group" aria-labelledby="feature-{{ loop.index }}">
+          <h2 class="feature-heading" id="feature-{{ loop.index }}">
+            <label class="feature-choice">
+              <input type="checkbox" name="category" value="{{ group.name }}">
+              <span>{{ group.name }}</span>
+            </label>
+            <span class="secondary">{{ group.summary }}</span>
+          </h2>
+          <div class="records">
+            {% for record in group.records %}
+              {# each body loads the first time it's opened #}
+              <details class="record" hx-get="/me/records/{{ record.key }}" hx-trigger="toggle once" hx-target="#record-{{ record.key }}">
+                <summary>
+                  <span class="record-name">{{ record.name }}</span>
+                  <span class="secondary">{{ record.summary }}</span>
+                  <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
+                </summary>
+                <div class="record-body" id="record-{{ record.key }}"><p class="secondary">Loading…</p></div>
+              </details>
+            {% endfor %}
+          </div>
+        </section>
       {% endfor %}
-    </div>
+      <p class="selection-actions">
+        <button class="button button-danger" type="submit">Delete selected</button>
+        <span class="secondary">Tick a feature to delete all of it, or open a table and tick single entries.</span>
+      </p>
+    </form>
+    <div id="selection-confirm">{% if choice %}{% include "data/_selection.html" %}{% endif %}</div>
   {% else %}
     <p class="secondary">Winter Dragon stores nothing about you right now.</p>
   {% endif %}
