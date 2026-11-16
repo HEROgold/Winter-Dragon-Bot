@@ -1,0 +1,354 @@
+<!doctype html>
+<!--
+  PROTOTYPE, throw away once a variant is picked.
+  Question: what should the League of Legends Clash cards look like in Components V2, built on /tournament and /team?
+  Three variants on this one page, switched with ?variant=A|B|C or the bar at the bottom (arrow keys work too).
+  Dates are real (Riot's Clash FAQ, 2026). Clock times are placeholders: the FAQ gives none.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PROTOTYPE: Clash cards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="v2.css">
+  <style>
+    .row { grid-template-columns: minmax(240px, 34ch) minmax(0, 600px); }
+    .variant { display: none; }
+    .variant.on { display: block; }
+    .variant > h2.vt { font-stretch: 80%; font-weight: 800; font-size: 1.6rem; margin: 24px 32px 0; }
+    .variant > p.vs { margin: 4px 32px 16px; color: var(--slate); max-width: 75ch; }
+    .grid-days { display: grid; grid-template-columns: auto 1fr auto; gap: 2px 12px; align-items: center; }
+    .chk { color: #3BA55D; font-weight: 700; }
+    .no { color: var(--dc-muted); }
+    .tier { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 3px; background: #4E5058; color: #fff; vertical-align: 1px; }
+    .b.small { height: 28px; padding: 0 12px; font-size: 13px; }
+    .b.on { outline: 2px solid #3BA55D; outline-offset: -2px; }
+    .pill-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* Floating switcher: not part of the design being judged. */
+    #switcher {
+      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 10;
+      display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 999px;
+      background: #FFD400; color: #111; box-shadow: 0 6px 24px rgba(0,0,0,.35);
+      font: 700 14px/1 system-ui, sans-serif;
+    }
+    #switcher button { border: 0; background: #111; color: #FFD400; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; }
+    #switcher span { padding: 0 12px; white-space: nowrap; }
+    @media print { #switcher { display: none; } }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="e-done" viewBox="0 0 20 20"><circle cx="10" cy="10" r="5" fill="#5E6B74"/></symbol>
+    <symbol id="e-here" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#F4F7F9"/><circle cx="10" cy="10" r="5" fill="#1E5AA0"/></symbol>
+    <symbol id="e-next" viewBox="0 0 20 20"><circle cx="10" cy="10" r="4.5" fill="none" stroke="#5E6B74" stroke-width="2"/></symbol>
+    <symbol id="e-marker" viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="10" rx="2" fill="#F4F7F9"/><rect x="2" y="8.3" width="16" height="3.4" fill="#1E5AA0"/></symbol>
+    <!-- Clash banner, drawn by the bot with Pillow like the bracket image. -->
+    <symbol id="banner" viewBox="0 0 560 140">
+      <rect width="560" height="140" fill="#26323B"/>
+      <path d="M0 140L90 80L150 104L240 44L320 96L400 62L470 92L560 50V140Z" fill="#5E6B74" opacity=".5"/>
+      <rect x="452" y="26" width="2" height="62" fill="#F4F7F9"/>
+      <rect x="454" y="26" width="34" height="20" fill="#F4F7F9"/><rect x="454" y="33" width="34" height="6" fill="#1E5AA0"/>
+      <text x="24" y="40" font-family="Archivo, sans-serif" font-size="14" font-weight="500" fill="#DCE8EF">Summoner's Rift, Season 3 Act 2</text>
+      <text x="24" y="86" font-family="Archivo, sans-serif" font-size="44" font-weight="800" font-stretch="70%" fill="#F4F7F9">WORLDS CLASH</text>
+      <text x="24" y="114" font-family="Archivo, sans-serif" font-size="15" font-weight="600" fill="#DCE8EF">Sat 21 and Sun 22 November</text>
+    </symbol>
+  </svg>
+
+  <header class="intro">
+    <h1>PROTOTYPE: Clash cards</h1>
+    <p>Three ways the Clash cog could post League of Legends Clash weekends. The bot checks Riot's schedule every Monday, makes a tournament per Clash day named like <strong>Worlds Clash Day 2</strong>, and posts in the channel set with <code>/clash channel</code>.</p>
+    <p class="legend">Every variant reuses <code>/tournament</code> in captains mode with teams of 5, and the lasting teams from <code>/team</code>. Riot plays the bracket in the client, so these tournaments never draw a bracket in Discord. Flip variants with the yellow bar or the arrow keys.</p>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- Shared: setup. Same in every variant. -->
+  <section class="row">
+    <div class="notes">
+      <h2>0. Setup, the same in every variant</h2>
+      <p><code>/clash channel</code> marks this channel. The reply shows what the weekly check found, so the admin sees at once that it works.</p>
+      <p>Mode picks Summoner's Rift, ARAM or both. Some servers only play one.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 10:12</span></div>
+        <div class="ephemeral-note">Only you can see this</div>
+        <div class="container" style="--bar:#5E6B74">
+          <div class="td"><strong>Clash posts go to <span class="mention">#clash</span>.</strong><br>I check Riot's schedule every Monday at 09:00 and post each Clash day once team formation opens.</div>
+          <hr class="sep">
+          <div class="section"><div class="td">Post these modes<br><span class="sub">Summoner's Rift and ARAM</span></div><button class="b secondary acc">Change</button></div>
+          <div class="section"><div class="td">Ping when a Clash week starts<br><span class="sub"><span class="mention">@Clash</span></span></div><button class="b secondary acc">Change</button></div>
+          <hr class="sep">
+          <div class="td sub">Next: <strong>Worlds Clash</strong>, team formation opens today. Then <strong>ARAM Freljord Cup</strong>, 19 and 20 December.</div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ===================================================================== -->
+  <div class="variant" data-key="A" data-name="One post per day">
+    <h2 class="vt">A. One post per day</h2>
+    <p class="vs">Each Clash day is its own tournament and its own post, close to today's sign-up card. Captains enter a lasting team per day. The post changes as the day gets closer: sign-up, lock-in, results.</p>
+
+    <section class="row">
+      <div class="notes">
+        <h2>A1. Monday: the day's sign-up</h2>
+        <p>The weekly check posts Day 1 and Day 2 as two messages. This is Day 2.</p>
+        <p>It's the existing captains sign-up card with a Clash header: the lock-in window as a Discord timestamp, so everyone sees their own time zone.</p>
+        <p>A team with 4 of 5 shows who's missing, because a Clash team can't lock in short.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 09:00</span></div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="td"><span class="h2">Worlds Clash Day 2</span><br>Summoner's Rift. Lock in <span class="ts">Sunday 22 November 17:00</span> to <span class="ts">19:00</span>.</div>
+            <div class="td sub">Tier IV can lock in from the start, Tier I only in the last half hour.</div>
+            <hr class="sep">
+            <div class="section"><div class="td"><strong>Avalanche</strong> 5 of 5 <span class="emo"><svg><use href="#e-marker"/></svg></span><br><span class="mention">@rimewolf</span> <span class="mention">@tundra_tom</span> <span class="mention">@eli</span> <span class="mention">@fen</span> <span class="mention">@gus</span></div><div class="thumb" style="--c:#7A8FA0">RW</div></div>
+            <div class="section"><div class="td"><strong>Frostbite</strong> 4 of 5, needs one more<br><span class="mention">@yeti</span> <span class="mention">@sleet</span> <span class="mention">@ash</span> <span class="mention">@brin</span></div><div class="thumb" style="--c:#8C7AA0">YE</div></div>
+            <hr class="sep">
+            <div class="buttons">
+              <button class="b primary">Enter my team</button><button class="b secondary">Add a player</button>
+              <button class="b danger">Leave</button>
+            </div>
+            <div class="td sub">2 teams. Made by the Clash schedule. Sign-up closes when lock-in opens.</div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="notes">
+        <h2>A2. One hour before lock-in</h2>
+        <p>A new message, so it pings. It names only the captains whose team is full, plus Frostbite's captain with a nudge.</p>
+        <p>The sign-up post above stops taking changes at the same time.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Sunday at 16:00</span></div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="td"><span class="h2">Lock in within the hour</span><br><strong>Worlds Clash Day 2</strong> opens lock-in <span class="ts">in 1 hour</span>.</div>
+            <hr class="sep">
+            <div class="td"><span class="emo"><svg><use href="#e-here"/></svg></span> <span class="mention">@rimewolf</span>, Avalanche is ready.</div>
+            <div class="td"><span class="emo"><svg><use href="#e-next"/></svg></span> <span class="mention">@yeti</span>, Frostbite is one player short.</div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="notes">
+        <h2>A3. After the day: results</h2>
+        <p>Riot runs the bracket, so the bot can't know who won. Each captain clicks how far their team got, and the post becomes the day's results.</p>
+        <p>"Won" puts the marker on the team, like the podium card.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Sunday at 22:40</span> <span class="edited">(edited)</span></div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="td"><span class="h2">Worlds Clash Day 2, results</span><br>Captains, report how far your team got.</div>
+            <hr class="sep">
+            <div class="section"><div class="td"><span class="emo"><svg><use href="#e-marker"/></svg></span> <strong>Avalanche</strong> <span class="tier">III</span><br>Won their bracket, 3 wins.</div><div class="thumb small" style="--c:#7A8FA0">RW</div></div>
+            <div class="section"><div class="td"><strong>Frostbite</strong> <span class="tier">IV</span><br><span class="muted">Not reported yet.</span></div><div class="thumb small" style="--c:#8C7AA0">YE</div></div>
+            <div class="select">Report Frostbite's result<span class="chev">⌄</span></div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================================================================== -->
+  <div class="variant" data-key="B" data-name="One board per Clash week">
+    <h2 class="vt">B. One board per Clash week</h2>
+    <p class="vs">One message per Clash event, with a banner image. Each team is one row with a mark per day, so a team playing both days appears once. Behind it there are still two tournaments, one per day.</p>
+
+    <section class="row">
+      <div class="notes">
+        <h2>B1. The week's board</h2>
+        <p>The banner is a Pillow image in a media gallery, like the bracket.</p>
+        <p>The day grid replaces two sign-up cards. "Enter my team" asks which team, then which days.</p>
+        <p>The board stays the one place to look all week, and the bot edits it as teams change.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 09:00</span> <span class="edited">(edited)</span></div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="gallery"><svg viewBox="0 0 560 140"><use href="#banner"/></svg></div>
+            <div class="td">Team formation is open. Lock in <span class="ts">17:00</span> to <span class="ts">19:00</span> both days.</div>
+            <hr class="sep">
+            <div class="grid-days">
+              <span></span><span></span><span class="sub">Sat&nbsp;&nbsp;Sun</span>
+              <span class="emo"><svg><use href="#e-marker"/></svg></span><span><strong>Avalanche</strong> 5 of 5</span><span><span class="chk">✓</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="chk">✓</span></span>
+              <span class="emo"><svg><use href="#e-next"/></svg></span><span><strong>Frostbite</strong> 4 of 5</span><span><span class="no">–</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="chk">✓</span></span>
+              <span class="emo"><svg><use href="#e-marker"/></svg></span><span><strong>Snow Day</strong> 5 of 5</span><span><span class="chk">✓</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="no">–</span></span>
+            </div>
+            <hr class="sep">
+            <div class="buttons"><button class="b primary">Enter my team</button><button class="b secondary">Rosters</button><button class="b danger">Leave a day</button></div>
+            <div class="td sub">Day 1: 2 teams. Day 2: 2 teams. Next Clash: ARAM Freljord Cup, 19 December.</div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="notes">
+        <h2>B2. After "Enter my team"</h2>
+        <p>One ephemeral step with two selects: the team, then the days. Captains of one team skip the first select.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 09:14</span></div>
+          <div class="ephemeral-note">Only you can see this</div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="td">Enter a team into <strong>Worlds Clash</strong>.</div>
+            <div class="select">Frostbite<span class="chev">⌄</span></div>
+            <div class="select">Choose the days<span class="chev">⌄</span></div>
+            <div class="select-open"><div class="opt"><strong>Day 1, Saturday 21 November</strong><span>2 teams so far</span></div><div class="opt"><strong>Day 2, Sunday 22 November</strong><span>1 team so far</span></div></div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="notes">
+        <h2>B3. Season schedule</h2>
+        <p><code>/clash schedule</code> lists every cup the weekly check knows, from Riot's page. Admins can skip one, so no board is posted for it.</p>
+        <p>The current week has the "here" mark, past cups the "done" mark.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 09:20</span></div>
+          <div class="container" style="--bar:#5E6B74">
+            <div class="td"><span class="h2">Clash, Season 3</span></div>
+            <hr class="sep">
+            <div class="td"><span class="emo"><svg><use href="#e-done"/></svg></span> ARAM Bilgewater Cup <span class="sub">22 and 23 August</span></div>
+            <div class="td"><span class="emo"><svg><use href="#e-done"/></svg></span> Bandle City Cup <span class="sub">19 and 20 September</span></div>
+            <div class="td"><span class="emo"><svg><use href="#e-done"/></svg></span> ARAM Piltover Cup <span class="sub">17 and 18 October</span></div>
+            <div class="section"><div class="td"><span class="emo"><svg><use href="#e-here"/></svg></span> <strong>Worlds Clash</strong> <span class="sub">21 and 22 November, posted</span></div><button class="b secondary acc small">Show board</button></div>
+            <div class="section"><div class="td"><span class="emo"><svg><use href="#e-next"/></svg></span> ARAM Freljord Cup <span class="sub">19 and 20 December</span></div><button class="b secondary acc small">Skip</button></div>
+            <hr class="sep">
+            <div class="td sub">From Riot's Clash FAQ, checked today at 09:00.</div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================================================================== -->
+  <div class="variant" data-key="C" data-name="Players first, teams drawn">
+    <h2 class="vt">C. Players first, teams drawn</h2>
+    <p class="vs">For servers without fixed teams. Players say which days they can play. On Friday the organiser draws teams of 5 per day with <code>/team</code>'s split, and the bot enters them as lasting teams so the captains can lock in.</p>
+
+    <section class="row">
+      <div class="notes">
+        <h2>C1. Monday: who can play?</h2>
+        <p>Two toggle buttons per player, no captain needed. The counts say how many full teams each day can make, which is the reason to click.</p>
+        <p>A captain who already has a full team can still enter it, through the second row.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 09:00</span> <span class="edited">(edited)</span></div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="td"><span class="h2">Worlds Clash</span><br>Summoner's Rift, this weekend. Tell me which days you can play, and I'll draw teams on Friday.</div>
+            <hr class="sep">
+            <div class="section"><div class="td"><strong>Day 1, Saturday</strong> <span class="ts">17:00</span><br>8 players, 1 full team and 3 spare. Two more make a second.</div><button class="b success acc on">Saturday</button></div>
+            <div class="section"><div class="td"><strong>Day 2, Sunday</strong> <span class="ts">17:00</span><br>11 players, 2 full teams and 1 spare.</div><button class="b secondary acc">Sunday</button></div>
+            <hr class="sep">
+            <div class="buttons"><button class="b secondary">Who's in</button><button class="b secondary">Enter a ready team</button></div>
+            <div class="td sub">Teams are drawn <span class="ts">Friday 20 November 20:00</span>. Organised by <span class="mention">@Hero</span>.</div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="notes">
+        <h2>C2. Friday: the draw</h2>
+        <p>The organiser's panel, in the style of "Manage match": one sentence per action, its button beside it.</p>
+        <p>Spare players go on a bench list and get pinged if a team loses a player before lock-in.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Friday at 20:00</span></div>
+          <div class="ephemeral-note">Only you can see this</div>
+          <div class="container" style="--bar:#5E6B74">
+            <div class="td"><strong>Worlds Clash</strong>: 8 players for Saturday, 11 for Sunday.</div>
+            <hr class="sep">
+            <div class="section"><div class="td">Draw teams of 5 for both days. Spare players go on the bench.</div><button class="b primary acc">Draw teams</button></div>
+            <div class="section"><div class="td">Give sign-up another day. The draw moves to Saturday 12:00.</div><button class="b secondary acc">Wait a day</button></div>
+            <hr class="sep large">
+            <div class="section"><div class="td">Nobody's playing this weekend.</div><button class="b danger acc">Call it off</button></div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+
+    <section class="row">
+      <div class="notes">
+        <h2>C3. The drawn teams</h2>
+        <p>Posted per day, named like <strong>Worlds Clash Day 2</strong>. The captain (first listed, marked) makes the team in the League client and invites the others.</p>
+        <p>"Swap me out" puts the clicker on the bench and pulls the first bench player in.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Friday at 20:01</span></div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="td"><span class="h2">Worlds Clash Day 2</span><br>Lock in <span class="ts">Sunday 22 November 17:00</span> to <span class="ts">19:00</span>. Captains make the team in the client.</div>
+            <hr class="sep">
+            <div class="td"><strong>Team 1</strong><br><span class="emo"><svg><use href="#e-marker"/></svg></span><span class="mention">@glacia</span> <span class="mention">@frostbyte</span> <span class="mention">@hal</span> <span class="mention">@ivo</span> <span class="mention">@kai</span></div>
+            <hr class="sep small">
+            <div class="td"><strong>Team 2</strong><br><span class="emo"><svg><use href="#e-marker"/></svg></span><span class="mention">@yeti</span> <span class="mention">@sleet</span> <span class="mention">@driftwood</span> <span class="mention">@ash</span> <span class="mention">@brin</span></div>
+            <hr class="sep">
+            <div class="td sub">Bench: <span class="mention">@hailey</span></div>
+            <div class="buttons"><button class="b secondary">Rename my team</button><button class="b danger">Swap me out</button></div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="row">
+    <div class="notes wide">
+      <h2>Open questions, for every variant</h2>
+      <p>Riot's FAQ lists dates only. The lock-in times shown here are made up. The Riot API's Clash endpoint returns each day's registration and start time, and its name keys ("worlds", "day_2") give the names directly, but it needs a Riot API key.</p>
+      <p>Riot runs the bracket, so these tournaments skip <code>/tournament start</code>. They need a way to finish without a bracket, for example a new "external" flag on the tournament.</p>
+    </div>
+  </section>
+
+  <div id="switcher" role="toolbar" aria-label="Prototype variant">
+    <button id="prev" aria-label="Previous variant">←</button>
+    <span id="label"></span>
+    <button id="next" aria-label="Next variant">→</button>
+  </div>
+
+  <script>
+    const variants = [...document.querySelectorAll('.variant')];
+    const keys = variants.map(v => v.dataset.key);
+    function show(key) {
+      if (!keys.includes(key)) key = keys[0];
+      variants.forEach(v => v.classList.toggle('on', v.dataset.key === key));
+      const v = variants.find(v => v.dataset.key === key);
+      document.getElementById('label').textContent = `${key} (${v.dataset.name})`;
+      const url = new URL(location.href);
+      url.searchParams.set('variant', key);
+      history.replaceState(null, '', url);
+    }
+    function step(d) {
+      const i = keys.indexOf(new URL(location.href).searchParams.get('variant') ?? keys[0]);
+      show(keys[(i + d + keys.length) % keys.length]);
+    }
+    document.getElementById('prev').onclick = () => step(-1);
+    document.getElementById('next').onclick = () => step(1);
+    addEventListener('keydown', e => {
+      if (e.target.closest('input, textarea, [contenteditable]')) return;
+      if (e.key === 'ArrowLeft') step(-1);
+      if (e.key === 'ArrowRight') step(1);
+    });
+    show(new URL(location.href).searchParams.get('variant'));
+  </script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!doctype html>
+<!--
+  PROTOTYPE, throw away once a variant is picked. Spec: #558, bridge decision: #571.
+  Question: how does the Clash board show each player's Discord confirmation next to what Riot's API sees in the client?
+  Three board variants, switched with ?variant=A|B|C or the bar at the bottom (arrow keys work too).
+  The cards below the board are the same in every variant. Dates are real (Riot, 2026); clock times are placeholders.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PROTOTYPE: Clash board</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="v2.css">
+  <style>
+    .row { grid-template-columns: minmax(240px, 34ch) minmax(0, 620px); }
+    .variant { display: none; }
+    .variant.on { display: block; }
+    .part { font-stretch: 80%; font-weight: 800; font-size: 1.6rem; margin: 28px 32px 0; }
+    .part-sub { margin: 4px 32px 12px; color: var(--slate); max-width: 75ch; }
+    .tier { display: inline-block; font-size: 11px; font-weight: 700; padding: 0 5px; border-radius: 3px; background: #4E5058; color: #fff; vertical-align: 1px; }
+    .ok { color: #3BA55D; font-weight: 700; }
+    .bad { color: #ED4245; font-weight: 700; }
+    .dim { color: var(--dc-muted); }
+    .strike { text-decoration: line-through; color: var(--dc-muted); }
+    .h3 { color: var(--dc-head); font-size: 16px; font-weight: 700; }
+    .pgrid { display: grid; grid-template-columns: 1fr 64px 64px; gap: 2px 8px; align-items: center; }
+    .pgrid .hd { color: var(--dc-muted); font-size: 12px; text-align: center; }
+    .pgrid .c { text-align: center; }
+    .legend-line { color: var(--dc-muted); font-size: 12px; }
+    .b.small { height: 28px; padding: 0 12px; font-size: 13px; }
+    .toggle-on { color: #3BA55D; font-weight: 600; }
+    .toggle-off { color: var(--dc-muted); font-weight: 600; }
+    #switcher {
+      position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 10;
+      display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 999px;
+      background: #FFD400; color: #111; box-shadow: 0 6px 24px rgba(0,0,0,.35);
+      font: 700 14px/1 system-ui, sans-serif;
+    }
+    #switcher button { border: 0; background: #111; color: #FFD400; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; }
+    #switcher span { padding: 0 12px; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="e-done" viewBox="0 0 20 20"><circle cx="10" cy="10" r="5" fill="#5E6B74"/></symbol>
+    <symbol id="e-here" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#F4F7F9"/><circle cx="10" cy="10" r="5" fill="#1E5AA0"/></symbol>
+    <symbol id="e-next" viewBox="0 0 20 20"><circle cx="10" cy="10" r="4.5" fill="none" stroke="#5E6B74" stroke-width="2"/></symbol>
+    <symbol id="e-marker" viewBox="0 0 20 20"><rect x="2" y="5" width="16" height="10" rx="2" fill="#F4F7F9"/><rect x="2" y="8.3" width="16" height="3.4" fill="#1E5AA0"/></symbol>
+    <symbol id="banner" viewBox="0 0 560 140">
+      <rect width="560" height="140" fill="#26323B"/>
+      <path d="M0 140L90 80L150 104L240 44L320 96L400 62L470 92L560 50V140Z" fill="#5E6B74" opacity=".5"/>
+      <rect x="452" y="26" width="2" height="62" fill="#F4F7F9"/>
+      <rect x="454" y="26" width="34" height="20" fill="#F4F7F9"/><rect x="454" y="33" width="34" height="6" fill="#1E5AA0"/>
+      <text x="24" y="40" font-family="Archivo, sans-serif" font-size="14" font-weight="500" fill="#DCE8EF">Summoner's Rift, Season 3 Act 2</text>
+      <text x="24" y="86" font-family="Archivo, sans-serif" font-size="44" font-weight="800" font-stretch="70%" fill="#F4F7F9">WORLDS CLASH</text>
+      <text x="24" y="114" font-family="Archivo, sans-serif" font-size="15" font-weight="600" fill="#DCE8EF">Sat 21 and Sun 22 November</text>
+    </symbol>
+  </svg>
+
+  <header class="intro">
+    <h1>PROTOTYPE: Clash board</h1>
+    <p>The board from spec <a href="https://github.com/HEROgold/Winter-Dragon-Bot/issues/558">#558</a>: B1's overview with A1's detail of who plays. The open question is <a href="https://github.com/HEROgold/Winter-Dragon-Bot/issues/571">#571</a>: how each player's Discord confirmation and Riot's view of the client show side by side.</p>
+    <p class="legend">Riot's API can tell us that a player is <strong>on the team in the client</strong>. It can't tell us that they readied up, locked in or have a ticket. Each variant below shows only what the API gives. Flip variants with the yellow bar or the arrow keys.</p>
+  </header>
+
+  <h2 class="part">The board</h2>
+  <p class="part-sub">Sunday, Day 2, EUW. Avalanche: Gus declined, Hailey was drawn from the clash pool into his spot, and Eli confirmed but isn't on the team in the client yet. Frostbite: Sleet hasn't answered. The guild also has members on EUNE, so the board gets a region section.</p>
+
+  <!-- ===================================================================== -->
+  <div class="variant" data-key="A" data-name="Two marks per player">
+    <section class="row">
+      <div class="notes">
+        <h2>A. Two marks per player</h2>
+        <p>Each player gets two small marks after their name: the first is their confirmation, the second is the client. One legend line explains them.</p>
+        <p>It's compact and keeps A1's mention lists, but the reader has to learn the legend.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Sunday at 15:10</span> <span class="edited">(edited)</span></div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="gallery"><svg viewBox="0 0 560 140"><use href="#banner"/></svg></div>
+            <div class="td legend-line"><span class="ok">✓</span> confirmed · <span class="bad">✗</span> declined · <span class="emo"><svg><use href="#e-next"/></svg></span> no answer · <span class="emo"><svg><use href="#e-marker"/></svg></span> on the team in the client</div>
+            <hr class="sep">
+            <div class="td"><span class="h3">EUW, Day 2</span> <span class="sub">Lock in <span class="ts">Sunday 17:00</span> to <span class="ts">19:00</span>. Confirm by <span class="ts">17:00</span>.</span></div>
+            <div class="section"><div class="td"><strong>Avalanche</strong> <span class="tier">III</span> 5 of 5, 4 in the client<br>
+              <span class="mention">@rimewolf</span> <span class="ok">✓</span><span class="emo"><svg><use href="#e-marker"/></svg></span>
+              <span class="mention">@tundra_tom</span> <span class="ok">✓</span><span class="emo"><svg><use href="#e-marker"/></svg></span>
+              <span class="mention">@eli</span> <span class="ok">✓</span>
+              <span class="mention">@fen</span> <span class="ok">✓</span><span class="emo"><svg><use href="#e-marker"/></svg></span>
+              <span class="mention">@hailey</span> <span class="ok">✓</span><span class="emo"><svg><use href="#e-marker"/></svg></span><br>
+              <span class="sub"><span class="strike">@gus</span> declined. Hailey drawn from the pool.</span></div><div class="thumb small" style="--c:#7A8FA0">RW</div></div>
+            <div class="section"><div class="td"><strong>Frostbite</strong> 4 of 5, not in the client yet<br>
+              <span class="mention">@yeti</span> <span class="ok">✓</span>
+              <span class="mention">@sleet</span> <span class="emo"><svg><use href="#e-next"/></svg></span>
+              <span class="mention">@ash</span> <span class="ok">✓</span>
+              <span class="mention">@brin</span> <span class="ok">✓</span></div><div class="thumb small" style="--c:#8C7AA0">YE</div></div>
+            <div class="td sub">Bench: <span class="mention">@kai</span> (benched 2 times), <span class="mention">@ivo</span> (1)</div>
+            <hr class="sep">
+            <div class="td"><span class="h3">EUW, Day 1</span> <span class="sub">Played. 1 team, see <span class="mention">#clash</span> results.</span></div>
+            <hr class="sep">
+            <div class="td"><span class="h3">EUNE, Day 2</span> <span class="sub">Lock in <span class="ts">Sunday 17:00</span>.</span><br><strong>Polar Express</strong> 3 of 5 <span class="mention">@nord</span> <span class="ok">✓</span> <span class="mention">@vik</span> <span class="ok">✓</span> <span class="mention">@lars</span> <span class="emo"><svg><use href="#e-next"/></svg></span></div>
+            <hr class="sep">
+            <div class="buttons"><button class="b primary">Enter my team</button><button class="b success">Join the pool</button><button class="b secondary">Confirm or decline</button><button class="b danger">Leave a day</button></div>
+            <div class="td sub">Client marks from Riot, checked <span class="ts">2 minutes ago</span>. Riot doesn't show who readied up.</div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================================================================== -->
+  <div class="variant" data-key="B" data-name="Two columns per team">
+    <section class="row">
+      <div class="notes">
+        <h2>B. Two columns per team</h2>
+        <p>Each team lists its players one per line, with a "Discord" and a "Client" column. It's B1's day grid turned on its side.</p>
+        <p>It's the easiest to read and needs no legend, but it's the tallest. With four teams, the board passes Discord's 40-component limit sooner, so the rest of the teams move behind a "More teams" button.</p>
+        <p><strong>Catch:</strong> Components V2 has no columns, and Discord's font isn't monospaced. The columns only line up inside a code block, where mentions don't work. Without one, each player needs a section of their own, which uses components even faster.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Sunday at 15:10</span> <span class="edited">(edited)</span></div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="gallery"><svg viewBox="0 0 560 140"><use href="#banner"/></svg></div>
+            <div class="td"><span class="h3">EUW, Day 2</span> <span class="sub">Lock in <span class="ts">Sunday 17:00</span> to <span class="ts">19:00</span>. Confirm by <span class="ts">17:00</span>.</span></div>
+            <hr class="sep">
+            <div class="td"><strong>Avalanche</strong> <span class="tier">III</span> ready to lock in, waiting on one player</div>
+            <div class="pgrid">
+              <span></span><span class="hd">Discord</span><span class="hd">Client</span>
+              <span><span class="emo"><svg><use href="#e-marker"/></svg></span><span class="mention">@rimewolf</span> <span class="sub">captain</span></span><span class="c ok">✓</span><span class="c ok">✓</span>
+              <span><span class="mention">@tundra_tom</span></span><span class="c ok">✓</span><span class="c ok">✓</span>
+              <span><span class="mention">@eli</span></span><span class="c ok">✓</span><span class="c dim">not yet</span>
+              <span><span class="mention">@fen</span></span><span class="c ok">✓</span><span class="c ok">✓</span>
+              <span><span class="mention">@hailey</span> <span class="sub">from the pool</span></span><span class="c ok">✓</span><span class="c ok">✓</span>
+              <span class="strike">@gus</span><span class="c bad">✗</span><span class="c dim">–</span>
+            </div>
+            <hr class="sep small">
+            <div class="td"><strong>Frostbite</strong> 4 of 5, nobody in the client yet</div>
+            <div class="pgrid">
+              <span><span class="emo"><svg><use href="#e-marker"/></svg></span><span class="mention">@yeti</span> <span class="sub">captain</span></span><span class="c ok">✓</span><span class="c dim">not yet</span>
+              <span><span class="mention">@sleet</span></span><span class="c dim">no answer</span><span class="c dim">–</span>
+              <span><span class="mention">@ash</span></span><span class="c ok">✓</span><span class="c dim">not yet</span>
+              <span><span class="mention">@brin</span></span><span class="c ok">✓</span><span class="c dim">not yet</span>
+            </div>
+            <hr class="sep">
+            <div class="td sub">Bench: <span class="mention">@kai</span> (benched 2 times), <span class="mention">@ivo</span> (1). Day 1 played, EUNE: 1 team.</div>
+            <div class="buttons"><button class="b primary">Enter my team</button><button class="b success">Join the pool</button><button class="b secondary">Confirm or decline</button><button class="b secondary">Other days and regions</button></div>
+            <div class="td sub">Client column from Riot, checked <span class="ts">2 minutes ago</span>. Riot doesn't show who readied up.</div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================================================================== -->
+  <div class="variant" data-key="C" data-name="Grouped by what's left to do">
+    <section class="row">
+      <div class="notes">
+        <h2>C. Grouped by what's left to do</h2>
+        <p>Each team's players are sorted by state: ready, confirmed but not in the client, no answer, declined. The line that needs action comes first, so a captain knows whom to chase.</p>
+        <p>It needs no legend and stays short, but nobody's position in the list stays fixed: players move as they act.</p>
+      </div>
+      <div class="discord">
+        <div class="msg"><div class="avatar bot">WD</div><div class="body">
+          <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Sunday at 15:10</span> <span class="edited">(edited)</span></div>
+          <div class="container" style="--bar:#1E5AA0">
+            <div class="gallery"><svg viewBox="0 0 560 140"><use href="#banner"/></svg></div>
+            <div class="td"><span class="h3">EUW, Day 2</span> <span class="sub">Lock in <span class="ts">Sunday 17:00</span> to <span class="ts">19:00</span>. Confirm by <span class="ts">17:00</span>.</span></div>
+            <hr class="sep">
+            <div class="section"><div class="td"><strong>Avalanche</strong> <span class="tier">III</span> <span class="sub">captain <span class="mention">@rimewolf</span></span><br>
+              <span class="emo"><svg><use href="#e-next"/></svg></span> Join the team in the client: <span class="mention">@eli</span><br>
+              <span class="emo"><svg><use href="#e-marker"/></svg></span> Ready: <span class="mention">@rimewolf</span> <span class="mention">@tundra_tom</span> <span class="mention">@fen</span> <span class="mention">@hailey</span><br>
+              <span class="sub">Declined: @gus. Hailey drawn from the pool.</span></div><div class="thumb small" style="--c:#7A8FA0">RW</div></div>
+            <div class="section"><div class="td"><strong>Frostbite</strong> <span class="sub">captain <span class="mention">@yeti</span>, needs one more</span><br>
+              <span class="emo"><svg><use href="#e-next"/></svg></span> Answer: <span class="mention">@sleet</span><br>
+              <span class="emo"><svg><use href="#e-next"/></svg></span> Join the team in the client: <span class="mention">@yeti</span> <span class="mention">@ash</span> <span class="mention">@brin</span></div><div class="thumb small" style="--c:#8C7AA0">YE</div></div>
+            <hr class="sep">
+            <div class="td sub">Bench: <span class="mention">@kai</span> (benched 2 times), <span class="mention">@ivo</span> (1)</div>
+            <div class="td"><span class="h3">EUNE, Day 2</span> <span class="sub">1 team, <strong>Polar Express</strong>, 3 of 5.</span></div>
+            <hr class="sep">
+            <div class="buttons"><button class="b primary">Enter my team</button><button class="b success">Join the pool</button><button class="b secondary">Confirm or decline</button><button class="b danger">Leave a day</button></div>
+            <div class="td sub">"Ready" means confirmed here and on the team in the client, per Riot <span class="ts">2 minutes ago</span>. Riot doesn't show who readied up.</div>
+          </div>
+        </div></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================================================================== -->
+  <h2 class="part">The same in every variant</h2>
+
+  <section class="row">
+    <div class="notes">
+      <h2>Confirm or decline</h2>
+      <p>Opened from the board. The account select only lists linked accounts in the Clash day's region. One account fills it in, and the select is skipped.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 12:40</span></div>
+        <div class="ephemeral-note">Only you can see this</div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td"><strong>Avalanche</strong> listed you for <strong>Worlds Clash Day 2</strong>, EUW. Confirm by <span class="ts">Sunday 17:00</span>.</div>
+          <div class="select">Eli#EUW, Gold II<span class="chev">⌄</span></div>
+          <div class="select-open"><div class="opt"><strong>Eli#EUW</strong><span>EUW, Gold II</span></div><div class="opt"><strong>EliSmurf#2nd</strong><span>EUW, Platinum IV</span></div></div>
+          <div class="buttons"><button class="b success">I'll play</button><button class="b danger">I can't</button></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="row">
+    <div class="notes">
+      <h2>/clash link</h2>
+      <p>The two ways to prove an account is yours, both on the dashboard. It says what linking means for your data before you click.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 12:31</span></div>
+        <div class="ephemeral-note">Only you can see this</div>
+        <div class="container" style="--bar:#5E6B74">
+          <div class="td"><span class="h2">Link a Riot account</span><br>Linking lets me follow your Clash teams, and collect your Clash and ranked games to place you with good teammates. You can switch collection off or delete the data on your data page at any time.</div>
+          <hr class="sep">
+          <div class="section"><div class="td">Sign in with Riot.<br><span class="sub">Works for any account.</span></div><button class="b primary acc">Sign in with Riot</button></div>
+          <div class="section"><div class="td">Use the Riot account on your Discord profile.<br><span class="sub">No extra sign-in if it's already connected.</span></div><button class="b secondary acc">Use my connection</button></div>
+          <hr class="sep">
+          <div class="td sub">Linked: <strong>Eli#EUW</strong> (EUW). <a class="mention">Privacy policy</a></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="row">
+    <div class="notes">
+      <h2>/clash setup</h2>
+      <p>Three toggles that work on their own, then the rest. Each row's button opens a select or a short form.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 10:12</span></div>
+        <div class="ephemeral-note">Only you can see this</div>
+        <div class="container" style="--bar:#5E6B74">
+          <div class="td"><span class="h2">Clash in this server</span><br>Next: <strong>Worlds Clash</strong>, 21 and 22 November, on EUW and EUNE.</div>
+          <hr class="sep">
+          <div class="section"><div class="td">Schedule <span class="toggle-on">on</span><br><span class="sub">Post each Clash and make a server event per day.</span></div><button class="b secondary acc small">Turn off</button></div>
+          <div class="section"><div class="td">Registration <span class="toggle-on">on</span><br><span class="sub">The board, confirmations and the clash pool.</span></div><button class="b secondary acc small">Turn off</button></div>
+          <div class="section"><div class="td">Tracking <span class="toggle-off">off</span><br><span class="sub">Follow teams in the client and show their brackets.</span></div><button class="b success acc small">Turn on</button></div>
+          <hr class="sep">
+          <div class="section"><div class="td">Channel <span class="mention">#clash</span>, ping <span class="mention">@Clash</span></div><button class="b secondary acc small">Change</button></div>
+          <div class="section"><div class="td">Organisers: Manage Server and <span class="mention">@Clash Captains</span></div><button class="b secondary acc small">Change</button></div>
+          <div class="section"><div class="td">Placement: automatic draw, Friday 20:00<br><span class="sub">Region, then whole teams, then longest benched.</span></div><button class="b secondary acc small">Change</button></div>
+          <div class="section"><div class="td">Confirm by: when lock-in opens</div><button class="b secondary acc small">Change</button></div>
+          <div class="section"><div class="td">Names: "{clash} Day {n}", banner on</div><button class="b secondary acc small">Change</button></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="row">
+    <div class="notes">
+      <h2>Lock-in reminder (A2)</h2>
+      <p>Now uses the client marks: it names who still has to join the team in the client, and who hasn't answered.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Sunday at 16:00</span></div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td"><span class="h2">Lock in within the hour</span><br><strong>Worlds Clash Day 2</strong>, EUW, opens lock-in <span class="ts">in 1 hour</span>.</div>
+          <hr class="sep">
+          <div class="td"><span class="emo"><svg><use href="#e-here"/></svg></span> <span class="mention">@rimewolf</span>, Avalanche is waiting on <span class="mention">@eli</span> to join in the client.</div>
+          <div class="td"><span class="emo"><svg><use href="#e-next"/></svg></span> <span class="mention">@yeti</span>, Frostbite is one short, and <span class="mention">@sleet</span> hasn't answered.</div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="row">
+    <div class="notes">
+      <h2>Results (A3)</h2>
+      <p>Built from the games, not reported by captains: each team's Riot bracket is a tournament, with its card behind the button. Opponents show by name and tier only.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Sunday at 22:40</span></div>
+        <div class="container" style="--bar:#1E5AA0">
+          <div class="td"><span class="h2">Worlds Clash Day 2, results</span><br>EUW. From Riot's game records.</div>
+          <hr class="sep">
+          <div class="section"><div class="td"><span class="emo"><svg><use href="#e-marker"/></svg></span> <strong>Avalanche</strong> <span class="tier">III</span><br>Won their bracket: beat Night Owls, Iron Wolves and Cold Feet.</div><button class="b secondary acc small">Bracket</button></div>
+          <div class="section"><div class="td"><strong>Frostbite</strong> <span class="tier">IV</span><br>Lost to Gromp Gang in round 1, then won the consolation bracket.</div><button class="b secondary acc small">Bracket</button></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="row">
+    <div class="notes">
+      <h2>/clash schedule (B3)</h2>
+      <p>Unchanged from the first prototype, plus the region list.</p>
+    </div>
+    <div class="discord">
+      <div class="msg"><div class="avatar bot">WD</div><div class="body">
+        <div class="who">Winter Dragon <span class="tag">APP</span> <span class="time">Today at 09:20</span></div>
+        <div class="container" style="--bar:#5E6B74">
+          <div class="td"><span class="h2">Clash, Season 3</span><br><span class="sub">EUW and EUNE</span></div>
+          <hr class="sep">
+          <div class="td"><span class="emo"><svg><use href="#e-done"/></svg></span> ARAM Piltover Cup <span class="sub">17 and 18 October</span></div>
+          <div class="section"><div class="td"><span class="emo"><svg><use href="#e-here"/></svg></span> <strong>Worlds Clash</strong> <span class="sub">21 and 22 November, posted</span></div><button class="b secondary acc small">Show board</button></div>
+          <div class="section"><div class="td"><span class="emo"><svg><use href="#e-next"/></svg></span> ARAM Freljord Cup <span class="sub">19 and 20 December</span></div><button class="b secondary acc small">Skip</button></div>
+        </div>
+      </div></div>
+    </div>
+  </section>
+
+  <div id="switcher" role="toolbar" aria-label="Prototype variant">
+    <button id="prev" aria-label="Previous variant">←</button>
+    <span id="label"></span>
+    <button id="next" aria-label="Next variant">→</button>
+  </div>
+
+  <script>
+    const variants = [...document.querySelectorAll('.variant')];
+    const keys = variants.map(v => v.dataset.key);
+    function show(key) {
+      if (!keys.includes(key)) key = keys[0];
+      variants.forEach(v => v.classList.toggle('on', v.dataset.key === key));
+      document.getElementById('label').textContent = `${key} (${variants.find(v => v.dataset.key === key).dataset.name})`;
+      const url = new URL(location.href);
+      url.searchParams.set('variant', key);
+      history.replaceState(null, '', url);
+    }
+    function step(d) {
+      const i = keys.indexOf(new URL(location.href).searchParams.get('variant') ?? keys[0]);
+      show(keys[(i + d + keys.length) % keys.length]);
+    }
+    document.getElementById('prev').onclick = () => step(-1);
+    document.getElementById('next').onclick = () => step(1);
+    addEventListener('keydown', e => {
+      if (e.target.closest('input, textarea, [contenteditable]')) return;
+      if (e.key === 'ArrowLeft') step(-1);
+      if (e.key === 'ArrowRight') step(1);
+    });
+    show(new URL(location.href).searchParams.get('variant'));
+  </script>
+</body>
+</html>
