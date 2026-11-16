@@ -145,6 +145,13 @@ How the dashboard writes stored values for people: times in their zone, interval
 - `day_label(day: date, today: date) -> str` — Return ``day`` as a heading on ``today``: ``Today``, ``Tomorrow``, or ``Tuesday 21 October`` (with any other year).
 - `shown_value(value: object, zone: ZoneInfo) -> str` — Return a stored ``value`` as the data page shows it: times in ``zone``, intervals in words, nothing as a dash.
 
+## `winter_dragon.web.legal` — `src/winter_dragon/web/legal.py`
+The privacy policy and terms of service: public pages that cover the whole bot, linked from every page's footer.
+
+- module names: ISSUES_URL, BACKUPS_KEPT, UPDATED, router
+- `@router.get privacy(request: Request) -> Response` — Show the privacy policy: what the bot stores, why, who else sees it, and how to have it deleted.
+- `@router.get terms(request: Request) -> Response` — Show the terms of service: the rules for using the bot and the dashboard.
+
 ## `winter_dragon.web.pages` — `src/winter_dragon/web/pages.py`
 The landing page, and the data page: everything the bot stores about the signed-in member, and deleting it.
 
@@ -414,7 +421,7 @@ Config descriptor scoped to the dashboard settings file.
 ### `class DashboardSettings`
 Where the dashboard is served, and how it signs people in with Discord.
 
-- attributes: host, port, public_url, client_secret, session_secret, session_days
+- attributes: host, port, public_url, client_secret, session_secret, session_days, privacy_email
 - `@classmethod https_only() -> bool` — Whether the dashboard is served over HTTPS, so its session cookie is only ever sent over it.
 
 ## `winter_dragon.web.shared_guilds` — `src/winter_dragon/web/shared_guilds.py`
