@@ -8,7 +8,15 @@ import pytest
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, select
 from wd_bot.testing import detached_cog
-from wd_db.extension.lifecycle import DELETED_MEMBER, LifecycleModel, alive, create_or_restore, owned_by, soft_delete
+from wd_db.extension.lifecycle import (
+    DELETED_MEMBER,
+    LifecycleModel,
+    Ownership,
+    alive,
+    create_or_restore,
+    owned_by,
+    soft_delete,
+)
 from wd_db.testing import seed, sqlite_engine
 from wd_discord import AutocompleteInteraction, GatewayGuild, GuildDelete, Permissions
 from wd_discord.gateway import EventName, parse_dispatch, parse_ready
@@ -26,10 +34,13 @@ from winter_dragon.cogs.privacy import cog as privacy
 from winter_dragon.cogs.privacy.cog import Privacy
 from winter_dragon.cogs.privacy.domain import (
     DeletionStep,
+    HiddenEntry,
     UsageCount,
     category_rows,
     hide_member_data,
     hide_member_rows,
+    restorable_rows,
+    restore_member_rows,
     stored_models,
 )
 from winter_dragon.cogs.reminder.cog import Reminders
@@ -880,3 +891,152 @@ async def test_chosen_rows_are_purged_30_days_after_they_were_hidden(engine: Eng
 
     with Session(engine) as session:
         assert session.exec(select(Reminder)).all() == []
+
+
+# --- Deleting at once, and restoring -------------------------------------------------------------------------------
+
+
+def _reminders(engine: Engine, *ids: int) -> None:
+    seed(
+        engine,
+        *(Reminder(id=reminder_id, content=f"r{reminder_id}", user_id=MEMBER_ID, timestamp=DAY_0) for reminder_id in ids),
+    )
+
+
+def _stored_ids(engine: Engine) -> list[int]:
+    with Session(engine) as session:
+        return sorted(row.id or 0 for row in session.exec(select(Reminder)))
+
+
+def test_deleting_now_purges_the_chosen_rows_at_once(engine: Engine) -> None:
+    _reminders(engine, 1, 2)
+
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {2}}, DAY_0, delete_now=True)
+
+    assert _stored_ids(engine) == [1]
+
+
+def test_deleting_now_still_anonymises_a_row_in_someone_else_s_history(engine: Engine) -> None:
+    _seed_guild(engine)
+    with Session(engine) as session:
+        lineup = session.exec(alive(MatchLineup)).one()
+
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {MatchLineup: {lineup.id or 0}}, DAY_0, delete_now=True)
+
+    with Session(engine) as session:
+        assert [row.user_id for row in session.exec(alive(MatchLineup))] == [DELETED_MEMBER]
+
+
+def test_hidden_rows_can_be_restored_within_30_days(engine: Engine) -> None:
+    _reminders(engine, 1, 2)
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {2}}, DAY_0)
+
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), _day(29)) == {Reminder: {2}}
+    assert restore_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {2}}, _day(29)) == 1
+
+    assert _alive_ids(engine, Reminder) == [1, 2]
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), _day(29)) == {}
+
+
+def test_a_hidden_row_can_not_be_restored_after_30_days(engine: Engine) -> None:
+    _reminders(engine, 1)
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {1}}, DAY_0)
+
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), _day(31)) == {}
+    assert restore_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {1}}, _day(31)) == 0
+    assert _alive_ids(engine, Reminder) == []
+
+
+def test_rows_deleted_now_can_not_be_restored(engine: Engine) -> None:
+    _reminders(engine, 1)
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {1}}, DAY_0, delete_now=True)
+
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), DAY_0) == {}
+
+
+def test_only_rows_the_member_hid_can_be_restored(engine: Engine) -> None:
+    seed(engine, _reminder(1))  # the member's, soft-deleted by the reminder cog once it fired
+
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), DAY_0) == {}
+    assert restore_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {1}}, DAY_0) == 0
+    assert _alive_ids(engine, Reminder) == []
+
+
+def test_a_member_can_not_restore_someone_else_s_rows(engine: Engine) -> None:
+    _reminders(engine, 1)
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {1}}, DAY_0)
+
+    assert restore_member_rows(engine, Snowflake(RIVAL_ID), {Reminder: {1}}, DAY_0) == 0
+    assert _alive_ids(engine, Reminder) == []
+
+
+def test_a_deletion_request_can_not_be_undone_by_restoring(engine: Engine) -> None:
+    _reminders(engine, 1, 2)
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {1}}, DAY_0)
+
+    hide_member_data(engine, Snowflake(MEMBER_ID), _day(1))
+
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), _day(1)) == {}
+
+
+def test_leaving_a_team_can_not_be_restored(engine: Engine) -> None:
+    with Session(engine) as session:
+        team = team_service.create_team(session, "a", MEMBER_ID)
+        team_service.join(session, team, RIVAL_ID)
+        session.commit()
+        own = team_service.membership(session, team, MEMBER_ID)
+        assert own is not None
+
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {TeamMember: {own.id or 0}}, DAY_0)
+
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), DAY_0) == {}
+
+
+async def test_the_purge_forgets_what_could_be_restored_once_it_s_purged(engine: Engine) -> None:
+    _reminders(engine, 1)
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {Reminder: {1}}, DAY_0)
+
+    await _cog(engine).purge(_day(31))
+
+    with Session(engine) as session:
+        assert session.exec(select(HiddenEntry)).all() == []
+
+
+class Notebook(LifecycleModel, table=True):
+    """A test table a member owns, which :class:`NotebookPage` rows point at."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="owner_id")
+
+    owner_id: int = Field(sa_type=BigInteger)
+
+
+class NotebookPage(LifecycleModel, table=True):
+    """A test table a member owns, a child of :class:`Notebook` by foreign key."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="owner_id")
+
+    owner_id: int = Field(sa_type=BigInteger)
+    notebook_id: int = Field(foreign_key="notebook.id")
+
+
+def test_restoring_a_row_brings_back_the_parent_the_member_hid_with_it(engine: Engine) -> None:
+    seed(engine, Notebook(id=1, owner_id=MEMBER_ID), NotebookPage(id=1, owner_id=MEMBER_ID, notebook_id=1))
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {Notebook: {1}, NotebookPage: {1}}, DAY_0)
+
+    assert restore_member_rows(engine, Snowflake(MEMBER_ID), {NotebookPage: {1}}, DAY_0) == 2
+
+    assert (_alive_ids(engine, Notebook), _alive_ids(engine, NotebookPage)) == ([1], [1])
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), DAY_0) == {}
+
+
+def test_a_row_whose_parent_is_hidden_for_another_reason_stays_hidden(engine: Engine) -> None:
+    seed(engine, Notebook(id=1, owner_id=MEMBER_ID), NotebookPage(id=1, owner_id=MEMBER_ID, notebook_id=1))
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {NotebookPage: {1}}, DAY_0)
+    with Session(engine) as session:
+        soft_delete(session, session.get_one(Notebook, 1), at=DAY_0)  # by its feature, not by the member
+        session.commit()
+
+    assert restore_member_rows(engine, Snowflake(MEMBER_ID), {NotebookPage: {1}}, DAY_0) == 0
+
+    assert _alive_ids(engine, NotebookPage) == []
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), DAY_0) == {NotebookPage: {1}}

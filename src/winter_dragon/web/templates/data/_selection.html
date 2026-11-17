@@ -7,11 +7,15 @@
     <ul>
       {% for name, count in choice.summary %}<li><strong>{{ name }}</strong>: {{ count }}</li>{% endfor %}
     </ul>
-    <p>The selected data is hidden at once and deleted for good {{ retention_days }} days later. An entry that is part of someone else's history, such as a match you played, stays with your name removed.</p>
+    <p>By default the selected data is hidden at once and deleted for good {{ retention_days }} days later. Until then you can restore it from this page. An entry that is part of someone else's history, such as a match you played, stays with your name removed.</p>
     <form class="confirm" method="post" action="/me/selection" hx-post="/me/selection" hx-target="#your-data" hx-swap="outerHTML">
       <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
       {% for name in choice.selection.categories | sort %}<input type="hidden" name="category" value="{{ name }}">{% endfor %}
       {% for row in choice.selection.rows | sort %}<input type="hidden" name="row" value="{{ row }}">{% endfor %}
+      <label class="delete-now">
+        <input type="checkbox" name="delete_now" value="true">
+        <span>Delete now. Skip the {{ retention_days }} days and delete it for good at once. You can't restore it.</span>
+      </label>
       <div class="confirm-actions">
         <button class="button button-danger" type="submit">Delete</button>
         <a class="button button-quiet" href="/me">Keep it</a>

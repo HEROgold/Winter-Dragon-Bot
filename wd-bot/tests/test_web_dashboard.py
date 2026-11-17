@@ -398,6 +398,81 @@ def test_without_htmx_the_confirmation_is_part_of_the_whole_page(member: TestCli
     assert "<strong>Reminders</strong>: 1 entry" in page
 
 
+def test_the_confirmation_states_the_30_day_default_and_offers_to_delete_now(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)))
+
+    confirm = _ticked(member, "/me/selection/confirm", category=["Reminders"])
+
+    assert "deleted for good 30 days later" in confirm
+    assert '<input type="checkbox" name="delete_now" value="true">' in confirm
+
+
+def _stored_contents(bind: Engine) -> list[str]:
+    with Session(bind) as session:
+        return sorted(row.content for row in session.exec(select(Reminder)))
+
+
+def test_deleting_now_purges_the_ticked_entries_at_once(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(id=1, content="keep", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        Reminder(id=2, content="drop", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)),
+    )
+
+    page = _ticked(member, "/me/selection", row=["reminder:2"], delete_now=["true"])
+
+    assert "Deleted 1 entry for good" in page
+    assert _stored_contents(bind) == ["keep"]
+    assert "Deleted entries" not in page  # nothing left to restore
+
+
+def test_deleted_entries_are_listed_to_restore(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=2, content="drop", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)))
+
+    page = _ticked(member, "/me/selection", row=["reminder:2"])
+    rows = member.get("/me/hidden/reminder", headers=HTMX).text
+
+    assert "Deleted entries" in page
+    assert '<input type="checkbox" name="category" value="Reminders" form="restore">' in page
+    assert 'name="row" value="reminder:2" form="restore"' in rows
+    assert "drop" in rows
+
+
+def test_restoring_an_entry_brings_it_back_on_the_data_page(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=2, content="drop", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)))
+    _ticked(member, "/me/selection", row=["reminder:2"])
+
+    page = _ticked(member, "/me/restore", row=["reminder:2"])
+
+    assert "Restored 1 entry" in page
+    assert _alive_contents(bind) == ["drop"]
+    assert '<input type="checkbox" name="category" value="Reminders">' in page
+    assert "Deleted entries" not in page
+
+
+def test_restoring_a_ticked_feature_brings_back_all_of_it(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(content="one", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        Reminder(content="two", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)),
+    )
+    _ticked(member, "/me/selection", category=["Reminders"])
+
+    page = _ticked(member, "/me/restore", category=["Reminders"])
+
+    assert "Restored 2 entries" in page
+    assert sorted(_alive_contents(bind)) == ["one", "two"]
+
+
+def test_someone_else_s_hidden_entry_can_not_be_restored(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=1, content="theirs", user_id=OTHER_ID, timestamp=NOW, deleted_at=NOW))
+
+    page = _ticked(member, "/me/restore", row=["reminder:1"])
+
+    assert "Restored 0 entries" in page
+    assert _alive_contents(bind) == []
+
+
 def test_a_record_that_does_not_exist_is_not_found(member: TestClient) -> None:
     assert member.get("/me/records/nonsense").status_code == 404
 

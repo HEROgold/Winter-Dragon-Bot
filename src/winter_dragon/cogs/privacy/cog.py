@@ -32,10 +32,12 @@ lazy from winter_dragon.cogs.privacy.domain import (
     CommandUsage,
     DeletionRequest,
     DepartedGuild,
+    HiddenEntry,
     UsageCount,
     deletion_steps,
     hide_member_data,
     hide_owned,
+    purge_rows,
     stored_models,
 )
 
@@ -202,6 +204,10 @@ class Privacy(Cog):
             with Session(self.bind) as session:
                 session.exec(delete(CommandUsage).where(col(CommandUsage.day) < (now - USAGE_RETENTION).date()))
                 session.commit()
+        if HiddenEntry in models:  # their rows are purged below, so they can't be restored anymore
+            with Session(self.bind) as session:
+                session.exec(delete(HiddenEntry).where(col(HiddenEntry.hidden_at) < cutoff))
+                session.commit()
         for model in models:
             self._purge_table(model, cutoff)
 
@@ -225,13 +231,5 @@ class Privacy(Cog):
         """Hard-delete ``model``'s rows soft-deleted before ``cutoff``, one at a time."""
         with Session(self.bind) as session:
             expired = session.exec(select(model.id).where(col(model.deleted_at) < cutoff)).all()
-        for row_id in expired:
-            with Session(self.bind) as session:
-                row = session.get(model, row_id)
-                if row is None:
-                    continue
-                session.delete(row)
-                try:
-                    session.commit()
-                except SQLAlchemyError as error:
-                    self.logger.warning(t"Could not purge {model.__name__} {row_id}: {error}")
+        for row_id, error in purge_rows(self.bind, model, (row_id for row_id in expired if row_id is not None)):
+            self.logger.warning(t"Could not purge {model.__name__} {row_id}: {error}")
