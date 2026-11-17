@@ -8,7 +8,15 @@ import pytest
 from sqlalchemy import BigInteger
 from sqlmodel import Field, Session, select
 from wd_bot.testing import detached_cog
-from wd_db.extension.lifecycle import DELETED_MEMBER, LifecycleModel, alive, create_or_restore, owned_by, soft_delete
+from wd_db.extension.lifecycle import (
+    DELETED_MEMBER,
+    LifecycleModel,
+    Ownership,
+    alive,
+    create_or_restore,
+    owned_by,
+    soft_delete,
+)
 from wd_db.testing import seed, sqlite_engine
 from wd_discord import AutocompleteInteraction, GatewayGuild, GuildDelete, Permissions
 from wd_discord.gateway import EventName, parse_dispatch, parse_ready
@@ -992,3 +1000,43 @@ async def test_the_purge_forgets_what_could_be_restored_once_it_s_purged(engine:
 
     with Session(engine) as session:
         assert session.exec(select(HiddenEntry)).all() == []
+
+
+class Notebook(LifecycleModel, table=True):
+    """A test table a member owns, which :class:`NotebookPage` rows point at."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="owner_id")
+
+    owner_id: int = Field(sa_type=BigInteger)
+
+
+class NotebookPage(LifecycleModel, table=True):
+    """A test table a member owns, a child of :class:`Notebook` by foreign key."""
+
+    ownership: ClassVar[Ownership] = Ownership(member="owner_id")
+
+    owner_id: int = Field(sa_type=BigInteger)
+    notebook_id: int = Field(foreign_key="notebook.id")
+
+
+def test_restoring_a_row_brings_back_the_parent_the_member_hid_with_it(engine: Engine) -> None:
+    seed(engine, Notebook(id=1, owner_id=MEMBER_ID), NotebookPage(id=1, owner_id=MEMBER_ID, notebook_id=1))
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {Notebook: {1}, NotebookPage: {1}}, DAY_0)
+
+    assert restore_member_rows(engine, Snowflake(MEMBER_ID), {NotebookPage: {1}}, DAY_0) == 2
+
+    assert (_alive_ids(engine, Notebook), _alive_ids(engine, NotebookPage)) == ([1], [1])
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), DAY_0) == {}
+
+
+def test_a_row_whose_parent_is_hidden_for_another_reason_stays_hidden(engine: Engine) -> None:
+    seed(engine, Notebook(id=1, owner_id=MEMBER_ID), NotebookPage(id=1, owner_id=MEMBER_ID, notebook_id=1))
+    hide_member_rows(engine, Snowflake(MEMBER_ID), {NotebookPage: {1}}, DAY_0)
+    with Session(engine) as session:
+        soft_delete(session, session.get_one(Notebook, 1), at=DAY_0)  # by its feature, not by the member
+        session.commit()
+
+    assert restore_member_rows(engine, Snowflake(MEMBER_ID), {NotebookPage: {1}}, DAY_0) == 0
+
+    assert _alive_ids(engine, NotebookPage) == []
+    assert restorable_rows(engine, Snowflake(MEMBER_ID), DAY_0) == {NotebookPage: {1}}

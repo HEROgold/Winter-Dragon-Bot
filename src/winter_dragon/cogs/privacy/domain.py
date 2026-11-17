@@ -4,7 +4,7 @@ Deleting a record only soft-deletes it, so it can still be restored for :data:`R
 """
 
 from datetime import date, datetime, timedelta
-lazy from dataclasses import KW_ONLY, dataclass
+lazy from dataclasses import KW_ONLY, dataclass, field
 lazy from enum import StrEnum, auto
 lazy from typing import TYPE_CHECKING, ClassVar
 
@@ -359,13 +359,66 @@ def restorable_rows(bind: Engine | Connection, member_id: Snowflake, now: dateti
     return {model: {row_id for row_id in ids if row_id is not None} for model, ids in restorable.items() if ids}
 
 
-def _taken(session: Session, row: LifecycleModel) -> bool:
+def _place_taken(session: Session, row: LifecycleModel) -> bool:
     """Whether an alive row holds ``row``'s :attr:`~wd_db.extension.lifecycle.LifecycleModel.alive_unique` values."""
     model = type(row)
     if not model.alive_unique:
         return False
     same = (getattr(model, name) == getattr(row, name) for name in model.alive_unique)
     return session.exec(alive(model).where(*same)).first() is not None
+
+
+@dataclass
+class _Restoring:
+    """One restore by a member: the rows they may bring back, and those that came back so far, by table."""
+
+    session: Session
+    restorable: Mapping[type[LifecycleModel], set[int]]
+    by_name: Mapping[str, type[LifecycleModel]]
+    """Every stored lifecycle model by table name, to follow a foreign key to its parent."""
+    back: dict[type[LifecycleModel], set[int]] = field(default_factory=dict)
+
+    def _parents(self, row: LifecycleModel) -> Generator[tuple[type[LifecycleModel], int]]:
+        """Yield the table and ID of each row ``row`` points at by foreign key."""
+        for key in type(row).__table__.foreign_keys:
+            parent = self.by_name.get(key.column.table.name)
+            parent_id = getattr(row, key.parent.name)
+            if parent is not None and key.column.name == "id" and parent_id is not None:
+                yield parent, parent_id
+
+    def _needed(self, model: type[LifecycleModel], row_id: int, needed: dict[type[LifecycleModel], set[int]]) -> bool:
+        """Add the ``model`` row ``row_id`` to ``needed`` if it's hidden, with the hidden rows it points at.
+
+        Return whether all of them can come back: each is one the member may restore, and no new row took its place.
+        """
+        if row_id in needed.get(model, set()) or row_id in self.back.get(model, set()):
+            return True
+        row = self.session.get(model, row_id)
+        if row is None:
+            return False
+        if row.deleted_at is None:
+            return True
+        if row_id not in self.restorable.get(model, set()) or _place_taken(self.session, row):
+            return False
+        needed.setdefault(model, set()).add(row_id)  # before its parents, so keys pointing in a circle end
+        return all(self._needed(parent, parent_id, needed) for parent, parent_id in self._parents(row))
+
+    def bring_back(self, model: type[LifecycleModel], row_id: int) -> None:
+        """Restore the ``model`` row ``row_id`` with the hidden rows it points at, or none of them if one can't come back.
+
+        So a restored row never points at a hidden one.
+        """
+        if row_id not in self.restorable.get(model, set()):
+            return
+        needed: dict[type[LifecycleModel], set[int]] = {}
+        if not self._needed(model, row_id, needed):
+            return
+        for table, ids in needed.items():
+            for row in self.session.exec(select(table).where(col(table.id).in_(ids))):
+                row.deleted_at = None
+                self.session.add(row)
+            self.back.setdefault(table, set()).update(ids)
+        self.session.flush()
 
 
 def restore_member_rows(
@@ -376,31 +429,27 @@ def restore_member_rows(
 ) -> int:
     """Bring back the rows ``chosen`` (IDs by table) the member ``member_id`` hid; return how many came back.
 
-    Only :func:`restorable_rows` count, so a member can't restore someone else's rows, nor their own once purged. A row
-    whose place a new one took (an alive row with the same unique values) stays hidden.
+    Only :func:`restorable_rows` count, so a member can't restore someone else's rows, nor their own once purged. A
+    hidden row a chosen row points at by foreign key comes back with it when the member hid it too; otherwise the
+    chosen row stays hidden, as does one whose place a new row took (an alive row with the same unique values).
     """
+    stored = stored_models(bind)
     restorable = restorable_rows(bind, member_id, now)
-    restored = 0
     with Session(bind) as session:
+        restoring = _Restoring(session, restorable, {model.__table__.name: model for model in stored})
         for model, ids in chosen.items():
-            wanted = restorable.get(model, set()) & {int(row_id) for row_id in ids}
-            back: list[int] = []
-            for row in session.exec(select(model).where(col(model.id).in_(wanted))).all():
-                if not _taken(session, row):
-                    row.deleted_at = None
-                    session.add(row)
-                    session.flush()
-                    back.append(row.id or 0)
+            for row_id in {int(row_id) for row_id in ids}:
+                restoring.bring_back(model, row_id)
+        for model, ids in restoring.back.items():
             session.exec(
                 delete(HiddenEntry).where(
                     col(HiddenEntry.user_id) == int(member_id),
                     col(HiddenEntry.table_name) == model.__table__.name,
-                    col(HiddenEntry.row_id).in_(back),
+                    col(HiddenEntry.row_id).in_(ids),
                 ),
             )
-            restored += len(back)
         session.commit()
-    return restored
+    return sum(len(ids) for ids in restoring.back.values())
 
 
 def deletion_steps(bind: Engine | Connection, member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]:
