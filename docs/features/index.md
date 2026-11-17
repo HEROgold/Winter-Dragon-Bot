@@ -24,7 +24,7 @@ Every feature carries a **v2 parity status** so this doubles as the porting chec
 | [Bot Core](bot-core.md) | Extension loading, hot reload, command sync, config, errors, telemetry | ✅ mostly ported (runtime), 🟡 for the operator cogs |
 | [Moderation & Logging](moderation.md) | Audit-log pipeline, log channels, gatekeeper, infractions, synced bans, purge | 🟡 event pipeline ported, cogs unwired |
 | [Server Management](server-management.md) | Auto-assign, autochannel, welcome, stats, announcements, guild scaffolding | 🟡 across the board |
-| [Games](games.md) | Hangman, incremental, LFG, question games, League of Legends, Clash | 🟡 except the Riot API client |
+| [Games](games.md) | Hangman, LFG, question games, League of Legends, Clash | 🟡 except the Riot API client |
 | [User Tools](user-tools.md) | Steam sales, reminders, fuel tracking, Urban Dictionary, invites, team splitting | ✅ except team splitting |
 | [Platform & Services](platform.md) | REST API, frontend, task queue, workers, metrics, data layer, Docker stack | ❌ largely missing |
 

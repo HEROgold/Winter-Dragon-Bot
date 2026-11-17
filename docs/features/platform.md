@@ -43,7 +43,7 @@ Long-running or bursty work is pushed out of the bot process onto a Redis-backed
 
 ## Data layer
 
-PostgreSQL through SQLModel, with roughly sixty table models covering users, guilds, roles, channels, messages, presence, and command usage, plus per-feature tables — audit logs, autochannels, infractions, lobbies, reminders, Steam sales and subscribers, hangman, the incremental game economy, synced bans, LoL accounts, matchmaking and team compositions, and data-deletion records.
+PostgreSQL through SQLModel, with roughly sixty table models covering users, guilds, roles, channels, messages, presence, and command usage, plus per-feature tables — audit logs, autochannels, infractions, lobbies, reminders, Steam sales and subscribers, hangman, synced bans, LoL accounts, matchmaking and team compositions, and data-deletion records.
 
 Shared model machinery sits above them: a common base model, API-exposed table variants, and a startup check that verifies the expected tables exist.
 

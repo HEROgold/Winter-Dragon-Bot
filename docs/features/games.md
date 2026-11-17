@@ -20,17 +20,6 @@ Multiplayer hangman played in-channel through buttons and a guess modal, with wo
 **Status:** 🟡 Copied, unwired — depends on the missing UI toolkit and hangman tables.
 **Source on `main`:** `src/winter_dragon/bot/extensions/games/hangman.py`
 
-## Incremental game
-
-A persistent idle/incremental game. Players buy generators that produce currency over time and check their progress; generators are bought through a shop menu rather than by typing IDs.
-
-It also carries an admin surface for tuning the game economy live — defining and updating generators, listing them, granting currency to a user, and setting generation rates — so balance changes do not require a deploy.
-
-Surface: `/incremental buy | progress`, plus `admin generator-*`, `currency add`, `rate add` subgroups.
-
-**Status:** 🟡 Copied, unwired — depends on the missing UI toolkit and the incremental tables (player, currency, generators, rates).
-**Source on `main`:** `src/winter_dragon/bot/extensions/games/incremental.py`, `games/incremental_ui.py`
-
 ## Looking for group
 
 Per-game matchmaking queues. Members join the queue for a game (`/lfg join`) and are matched with others waiting for the same one; leaving drops them from every queue at once.

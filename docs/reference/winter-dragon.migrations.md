@@ -152,3 +152,10 @@ feat(web): delete now, or restore within 30 days.
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_17_a1c3e5d7f902_drop_the_incremental_game_tables` — `src/winter_dragon/migrations/versions/2026_11_17_a1c3e5d7f902_drop_the_incremental_game_tables.py`
+Drop the Incremental game's tables.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
