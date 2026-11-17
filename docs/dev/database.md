@@ -94,8 +94,15 @@ Dumps (pg_dump's custom format) land in `./backups/`, which git ignores:
 - `pre-migrate-<time>.dump` on every `docker compose up`, before the migrations run;
 - `daily-<time>.dump` once a day from the `backup-daily` service.
 
-The newest 14 of each kind are kept (`scripts/backup-db.sh`). To restore one, stop what writes to the database and
-load the dump:
+[`scripts/backup-db.sh`](../../scripts/backup-db.sh) applies two limits after each dump:
+
+- It deletes every dump older than 30 days, of any kind. The privacy policy relies on this: purged data leaves the
+  backups within 30 days of its purge. `MAX_AGE_DAYS` changes the limit.
+- It keeps at most the newest 14 dumps of the kind it just wrote. `KEEP` changes the count.
+
+A dump is deleted when it breaks either limit. `bash scripts/test-backup-db.sh` tests both.
+
+To restore a dump, stop what writes to the database and load the dump:
 
 ```bash
 docker compose stop bot web
