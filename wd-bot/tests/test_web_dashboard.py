@@ -172,6 +172,14 @@ def test_the_legal_pages_open_without_signing_in(client: TestClient, path: str, 
     assert "github.com/HEROgold/Winter-Dragon-Bot/issues" in page.text
 
 
+@pytest.mark.parametrize("path", ["/oauth/login", "/oauth/logout"])
+def test_the_oauth_routes_show_the_maintenance_page(client: TestClient, path: str) -> None:
+    page = client.get(path, follow_redirects=False)
+
+    assert page.status_code == 503
+    assert '<h1 class="page-title">Under construction</h1>' in page.text
+
+
 def test_the_privacy_policy_names_who_runs_the_bot_and_who_else_sees_the_data(client: TestClient) -> None:
     text = html.unescape(client.get("/privacy").text)
 
