@@ -145,3 +145,10 @@ tournament foreign keys.
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_17_3eee35c48567_feat_web_delete_now_or_restore_within_` — `src/winter_dragon/migrations/versions/2026_11_17_3eee35c48567_feat_web_delete_now_or_restore_within_.py`
+feat(web): delete now, or restore within 30 days.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.

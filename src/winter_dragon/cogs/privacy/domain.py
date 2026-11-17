@@ -115,7 +115,8 @@ class HiddenEntry(LifecycleModel, table=True):
     """The member who hid the row."""
     table_name: str
     """The hidden row's table."""
-    row_id: int
+    row_id: int = Field(sa_type=BigInteger)
+    """The hidden row's ``id``; a Discord ID in a table keyed by one, so it needs 64 bits."""
     hidden_at: datetime = Field(sa_type=AwareDateTime)
 
 

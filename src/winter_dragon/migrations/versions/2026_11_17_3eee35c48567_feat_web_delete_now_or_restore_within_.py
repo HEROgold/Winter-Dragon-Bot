@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("table_name", sa.String(), nullable=False),
-        sa.Column("row_id", sa.Integer(), nullable=False),
+        sa.Column("row_id", sa.BigInteger(), nullable=False),
         sa.Column("hidden_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
