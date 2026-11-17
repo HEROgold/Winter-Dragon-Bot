@@ -152,6 +152,13 @@ The privacy policy and terms of service: public pages that cover the whole bot, 
 - `@router.get privacy(request: Request) -> Response` — Show the privacy policy: what the bot stores, why, who else sees it, and how to have it deleted.
 - `@router.get terms(request: Request) -> Response` — Show the terms of service: the rules for using the bot and the dashboard.
 
+## `winter_dragon.web.oauth` — `src/winter_dragon/web/oauth.py`
+Placeholder pages for ``/oauth/login`` and ``/oauth/logout``, which are still being built; both show a maintenance page.
+
+- module names: router
+- `@router.get login(request: Request) -> Response` — Show the maintenance page until OAuth sign-in on this route is built.
+- `@router.get logout(request: Request) -> Response` — Show the maintenance page until OAuth sign-out on this route is built.
+
 ## `winter_dragon.web.pages` — `src/winter_dragon/web/pages.py`
 The landing page, and the data page: everything the bot stores about the signed-in member, and deleting it.
 
