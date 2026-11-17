@@ -461,7 +461,10 @@ The privacy tables, and the rules for hiding a member's or a guild's data, for t
 - `removable_rows[M: LifecycleModel](model: type[M], member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> SelectOfScalar[M]` — Select the ``model`` rows a deletion request by ``member_id`` removes: owned, hook-removed and anonymised rows.
 - `removable_only(bind: Engine | Connection, member_id: Snowflake, chosen: Mapping[type[LifecycleModel], Collection[int]]) -> dict[type[LifecycleModel], set[int]]` — Return ``chosen`` (IDs by table) with only the rows a deletion request by ``member_id`` removes.
 - `category_rows(bind: Engine | Connection, member_id: Snowflake, names: Collection[str]) -> dict[type[LifecycleModel], set[int]]` — Return the IDs of every row a deletion request by ``member_id`` removes, in the tables of the categories ``names``.
-- `hide_member_rows(bind: Engine | Connection, member_id: Snowflake, chosen: Mapping[type[LifecycleModel], Collection[int]], now: datetime) -> int` — Hide the rows ``chosen`` (IDs by table) of the member ``member_id``'s data at ``now``, as a deletion request would.
+- `hide_member_rows(bind: Engine | Connection, member_id: Snowflake, chosen: Mapping[type[LifecycleModel], Collection[int]], now: datetime, *, delete_now: bool=False) -> MemberRowsHidden` — Hide the rows ``chosen`` (IDs by table) of the member ``member_id``'s data at ``now``, as a deletion request would.
+- `purge_rows(bind: Engine | Connection, model: type[LifecycleModel], ids: Iterable[int]) -> list[tuple[int, Exception]]` — Hard-delete the ``model`` rows ``ids``, each on its own; return the IDs that failed, with why.
+- `restorable_rows(bind: Engine | Connection, member_id: Snowflake, now: datetime) -> dict[type[LifecycleModel], set[int]]` — Return the IDs, by table, of the rows the member ``member_id`` hid that they can still restore at ``now``.
+- `restore_member_rows(bind: Engine | Connection, member_id: Snowflake, chosen: Mapping[type[LifecycleModel], Collection[int]], now: datetime) -> int` — Bring back the rows ``chosen`` (IDs by table) the member ``member_id`` hid; return how many came back.
 - `deletion_steps(bind: Engine | Connection, member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
 
 ### `class DepartedGuild(DiscordKeyedModel, table=True)`
@@ -490,6 +493,16 @@ How often a member ran a command in a guild on one UTC day; the member owns it, 
 How often a member ran ``command`` in the guild ``guild_id`` (``None`` for a DM) on ``day``.
 
 - fields: command: str, guild_id: Snowflake | None, day: date, count: int
+
+### `class HiddenEntry(LifecycleModel, table=True)`
+A row a member hid from Your data, which they can restore until :data:`RETENTION` after ``hidden_at``.
+
+- fields: user_id: int, table_name: str, row_id: int, hidden_at: datetime
+
+### `@dataclass class MemberRowsHidden`
+What :func:`hide_member_rows` did with the chosen rows.
+
+- fields: done: int, still_hidden: int
 
 ## `winter_dragon.cogs.reminder.cog` — `src/winter_dragon/cogs/reminder/cog.py`
 The /reminder command group: one-off and repeating reminders, sent as DMs by a background task.

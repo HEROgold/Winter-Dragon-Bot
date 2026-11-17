@@ -35,6 +35,9 @@ The bot stores only what a feature needs. It does not copy messages, presence or
   - Your data groups the member's records by feature. Each feature registers its own tables under a name, in its own module; a table no feature registers shows under its cog package's name.
   - The member ticks whole features, single entries, or both, and confirms on a step that lists how many entries of each feature go. Only entries a full deletion would remove count, so a member can't delete someone else's data.
   - Deleting follows the rules of a full deletion: a feature's hook cleans up first (leaving a team hands its captaincy over, a place in a tournament in sign-up is withdrawn), an entry in someone else's history keeps its row with the member's ID removed, and every other entry is hidden at once and purged 30 days later.
+  - The confirmation step states that 30-day default and has a "Delete now" box. Ticking it purges the hidden entries at once. An entry another row still points at stays hidden and goes with the daily purge.
+  - Without "Delete now", Your data lists the hidden entries under "Deleted entries", grouped by feature. The member can restore whole features or single entries until the 30 days pass, and restored entries are back on the page. Only entries privacy hid can come back: an anonymised entry has lost the member's ID, and a hook's cleanup (a team left, a sign-up withdrawn) isn't undone. An entry whose place a newer one took stays hidden.
+  - A later full deletion request ends every restore, so it still can't be undone.
 - **Status:** New.
 
 ## A guild removes the bot

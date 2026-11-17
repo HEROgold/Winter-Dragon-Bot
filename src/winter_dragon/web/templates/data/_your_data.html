@@ -38,5 +38,7 @@
     <p class="secondary">Winter Dragon stores nothing about you right now.</p>
   {% endif %}
 
+  {% if hidden %}{% include "data/_hidden.html" %}{% endif %}
+
   {% include "data/_deletion.html" %}
 </div>

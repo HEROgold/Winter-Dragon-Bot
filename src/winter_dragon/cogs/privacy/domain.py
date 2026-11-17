@@ -12,8 +12,9 @@ from sqlalchemy import BigInteger
 from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownership
-lazy from sqlalchemy import inspect, or_
-lazy from sqlmodel import Session, SQLModel, col
+lazy from sqlalchemy import delete, inspect, or_
+lazy from sqlalchemy.exc import SQLAlchemyError
+lazy from sqlmodel import Session, SQLModel, col, select
 lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive, lifecycle_models, owned_by, soft_delete
 
 lazy from winter_dragon.data_categories import DataCategory
@@ -102,7 +103,23 @@ class UsageCount:
     count: int
 
 
-PRIVACY_TABLES = (DepartedGuild, DeletionRequest, CommandUsage)
+class HiddenEntry(LifecycleModel, table=True):
+    """A row a member hid from Your data, which they can restore until :data:`RETENTION` after ``hidden_at``.
+
+    Only rows privacy itself soft-deleted are recorded: not an anonymised row, whose member ID is gone, nor one a
+    feature's hook dealt with, such as a team the member left. Owned by no one, so the data page doesn't list it; a
+    deletion request and the purge delete it outright.
+    """
+
+    user_id: int = Field(sa_type=BigInteger, index=True)
+    """The member who hid the row."""
+    table_name: str
+    """The hidden row's table."""
+    row_id: int
+    hidden_at: datetime = Field(sa_type=AwareDateTime)
+
+
+PRIVACY_TABLES = (DepartedGuild, DeletionRequest, CommandUsage, HiddenEntry)
 """Every privacy table, which the privacy cog creates on load."""
 
 
@@ -167,6 +184,8 @@ def hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datet
             request.requested_at, request.hidden_at, request.purged_at = now, None, None
             session.add(request)
             session.commit()
+        if HiddenEntry in models:  # the request can't be undone, not even the rows the member hid before it
+            session.exec(delete(HiddenEntry).where(col(HiddenEntry.user_id) == int(member_id)))
         MemberHiddenHook.run_all(session, member_id, models)
         anonymise_member(session, models, member_id)
         hide_owned(session, models, now, member=member_id)
@@ -244,22 +263,35 @@ def _anonymise_row(row: LifecycleModel, member_id: Snowflake) -> bool:
     return bool(named)
 
 
+@dataclass(frozen=True)
+class MemberRowsHidden:
+    """What :func:`hide_member_rows` did with the chosen rows."""
+
+    done: int
+    """How many were hidden, anonymised or cleaned up by a feature's hook."""
+    still_hidden: int = 0
+    """How many ``delete_now`` couldn't purge, because another row still points at them; they go with the daily purge."""
+
+
 def hide_member_rows(
     bind: Engine | Connection,
     member_id: Snowflake,
     chosen: Mapping[type[LifecycleModel], Collection[int]],
     now: datetime,
-) -> int:
+    *,
+    delete_now: bool = False,
+) -> MemberRowsHidden:
     """Hide the rows ``chosen`` (IDs by table) of the member ``member_id``'s data at ``now``, as a deletion request would.
 
     Only rows a deletion request by the member removes count; any other ID is ignored, so a member can't hide someone
     else's data. Each feature's :class:`~winter_dragon.member_hidden.MemberHiddenHook` cleans up the rows it knows
     first, such as leaving a team, which hands its captaincy over. Of the rest, a row the member doesn't own but whose
-    anonymised column names them keeps living with the member's ID replaced; every other row is soft-deleted, and
-    purged :data:`RETENTION` later. Return how many of the chosen rows were hidden or anonymised.
+    anonymised column names them keeps living with the member's ID replaced; every other row is soft-deleted and
+    recorded as a :class:`HiddenEntry`, so the member can restore it until it's purged :data:`RETENTION` later.
+    ``delete_now`` purges those rows at once instead, and records nothing to restore.
     """
     stored = stored_models(bind)
-    done = 0
+    done, hidden = 0, dict[type[LifecycleModel], set[int]]()
     with Session(bind) as session:
         for model in purge_order(model for model in chosen if model in stored):
             ids = _removable_ids(session, model, member_id, stored) & {int(row_id) for row_id in chosen[model]}
@@ -270,10 +302,105 @@ def hide_member_rows(
             for row in session.exec(alive(model).where(col(model.id).in_(ids))).all():
                 if row.id in owned or not _anonymise_row(row, member_id):
                     soft_delete(session, row, at=now)
+                    hidden.setdefault(model, set()).add(row.id or 0)
                 else:
                     session.add(row)
+        if not delete_now and HiddenEntry in stored:
+            session.add_all(
+                HiddenEntry(user_id=int(member_id), table_name=model.__table__.name, row_id=row_id, hidden_at=now)
+                for model, ids in hidden.items()
+                for row_id in ids
+            )
         session.commit()
-    return done
+    if not delete_now:
+        return MemberRowsHidden(done=done)
+    failed = sum(len(purge_rows(bind, model, ids)) for model, ids in hidden.items())  # children first, as hidden
+    return MemberRowsHidden(done=done, still_hidden=failed)
+
+
+def purge_rows(bind: Engine | Connection, model: type[LifecycleModel], ids: Iterable[int]) -> list[tuple[int, Exception]]:
+    """Hard-delete the ``model`` rows ``ids``, each on its own; return the IDs that failed, with why.
+
+    A row fails when another still points at it (by foreign key); the rest go anyway.
+    """
+    failed: list[tuple[int, Exception]] = []
+    for row_id in ids:
+        with Session(bind) as session:
+            row = session.get(model, row_id)
+            if row is None:
+                continue
+            session.delete(row)
+            try:
+                session.commit()
+            except SQLAlchemyError as error:
+                failed.append((row_id, error))
+    return failed
+
+
+def restorable_rows(bind: Engine | Connection, member_id: Snowflake, now: datetime) -> dict[type[LifecycleModel], set[int]]:
+    """Return the IDs, by table, of the rows the member ``member_id`` hid that they can still restore at ``now``.
+
+    That's each :class:`HiddenEntry` of theirs younger than :data:`RETENTION` whose row is still hidden.
+    """
+    stored = stored_models(bind)
+    if HiddenEntry not in stored:
+        return {}
+    by_name = {model.__table__.name: model for model in stored}
+    recent = col(HiddenEntry.user_id) == int(member_id), col(HiddenEntry.hidden_at) >= now - RETENTION
+    with Session(bind) as session:
+        wanted: dict[type[LifecycleModel], set[int]] = {}
+        for entry in session.exec(select(HiddenEntry).where(*recent)):
+            if entry.table_name in by_name:
+                wanted.setdefault(by_name[entry.table_name], set()).add(entry.row_id)
+        restorable = {
+            model: set(session.exec(select(model.id).where(col(model.id).in_(ids), col(model.deleted_at).is_not(None))))
+            for model, ids in wanted.items()
+        }
+    return {model: {row_id for row_id in ids if row_id is not None} for model, ids in restorable.items() if ids}
+
+
+def _taken(session: Session, row: LifecycleModel) -> bool:
+    """Whether an alive row holds ``row``'s :attr:`~wd_db.extension.lifecycle.LifecycleModel.alive_unique` values."""
+    model = type(row)
+    if not model.alive_unique:
+        return False
+    same = (getattr(model, name) == getattr(row, name) for name in model.alive_unique)
+    return session.exec(alive(model).where(*same)).first() is not None
+
+
+def restore_member_rows(
+    bind: Engine | Connection,
+    member_id: Snowflake,
+    chosen: Mapping[type[LifecycleModel], Collection[int]],
+    now: datetime,
+) -> int:
+    """Bring back the rows ``chosen`` (IDs by table) the member ``member_id`` hid; return how many came back.
+
+    Only :func:`restorable_rows` count, so a member can't restore someone else's rows, nor their own once purged. A row
+    whose place a new one took (an alive row with the same unique values) stays hidden.
+    """
+    restorable = restorable_rows(bind, member_id, now)
+    restored = 0
+    with Session(bind) as session:
+        for model, ids in chosen.items():
+            wanted = restorable.get(model, set()) & {int(row_id) for row_id in ids}
+            back: list[int] = []
+            for row in session.exec(select(model).where(col(model.id).in_(wanted))).all():
+                if not _taken(session, row):
+                    row.deleted_at = None
+                    session.add(row)
+                    session.flush()
+                    back.append(row.id or 0)
+            session.exec(
+                delete(HiddenEntry).where(
+                    col(HiddenEntry.user_id) == int(member_id),
+                    col(HiddenEntry.table_name) == model.__table__.name,
+                    col(HiddenEntry.row_id).in_(back),
+                ),
+            )
+            restored += len(back)
+        session.commit()
+    return restored
 
 
 def deletion_steps(bind: Engine | Connection, member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]:

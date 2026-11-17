@@ -161,7 +161,9 @@ The landing page, and the data page: everything the bot stores about the signed-
 - `@router.get data_page(request: Request, account: SignedIn, bind: Database) -> Response` — Show everything the bot stores about the signed-in member, and the way to delete it.
 - `@router.get record_rows(request: Request, key: str, account: SignedIn, bind: Database) -> Response` — Show the signed-in member's rows of the table ``key``, when its record is opened.
 - `@router.post selection_confirm(request: Request, account: SignedIn, bind: Database, category: list[str] | None=None, row: list[str] | None=None) -> Response` — Show what deleting the ticked features and rows removes, and ask the member to confirm it.
-- `@router.post delete_selection(request: Request, account: SignedIn, bind: Database, category: list[str] | None=None, row: list[str] | None=None) -> Response` — Hide the ticked features and rows of the member's data, by the rules of a deletion request.
+- `@router.post delete_selection(request: Request, account: SignedIn, bind: Database, category: list[str] | None=None, row: list[str] | None=None, *, delete_now: bool=False) -> Response` — Hide the ticked features and rows of the member's data, by the rules of a deletion request.
+- `@router.get hidden_rows(request: Request, key: str, account: SignedIn, bind: Database) -> Response` — Show the signed-in member's deleted rows of the table ``key`` they can still restore, when its record is opened.
+- `@router.post restore_selection(request: Request, account: SignedIn, bind: Database, category: list[str] | None=None, row: list[str] | None=None) -> Response` — Bring back the ticked features and rows of what the member deleted, while they still can.
 - `@router.get deletion_ask(request: Request, account: SignedIn, bind: Database) -> Response` — Show the deletion section as it first is: what deleting does, and the button to start.
 - `@router.get deletion_confirm(request: Request, account: SignedIn, bind: Database) -> Response` — Ask the member to type their username, to confirm they mean to delete their data.
 - `@router.post request_deletion(request: Request, account: SignedIn, bind: Database, confirm_name: str='') -> Response` — Hide all of the member's data for their deletion request, once they typed their username to confirm it.
@@ -336,12 +338,15 @@ The Profile's Urban Dictionary page: the member's lookups, newest first, with a 
 What the dashboard shows of the bot: the features its cogs define, and every record it stores about a member.
 
 - module names: DOCS_URL, HIDDEN_FIELDS
-- `create_dashboard_tables(bind: Engine) -> None` — Make sure the tables the dashboard writes to exist (deletion requests and reminders), as the bot's cogs do.
+- `create_dashboard_tables(bind: Engine) -> None` — Make sure the tables the dashboard writes to exist (deletion requests, deleted entries, reminders), as the cogs do.
 - `features() -> Generator[Feature]` — Yield every command group the app's cogs define, by name; call :func:`~winter_dragon.cogs.import_cogs` first.
 - `member_records(bind: Engine, member_id: Snowflake) -> Generator[DataRecord]` — Yield a record for every table holding rows a deletion request by the member ``member_id`` removes, by name.
 - `record_groups(bind: Engine, member_id: Snowflake) -> Generator[RecordGroup]` — Yield the member ``member_id``'s records grouped by feature, features and tables by name.
+- `hidden_groups(bind: Engine, member_id: Snowflake, now: datetime) -> Generator[RecordGroup]` — Yield the rows the member ``member_id`` deleted and can still restore at ``now``, grouped like :func:`record_groups`.
 - `record_table(bind: Engine, member_id: Snowflake, key: str, zone: ZoneInfo) -> RecordTable | None` — Return the rows of the table ``key`` a deletion request by the member ``member_id`` removes, times in ``zone``.
+- `hidden_table(bind: Engine, member_id: Snowflake, key: str, zone: ZoneInfo, now: datetime) -> RecordTable | None` — Return the rows of the table ``key`` the member ``member_id`` can restore at ``now``, times in ``zone``.
 - `chosen_rows(bind: Engine, member_id: Snowflake, selection: Selection) -> dict[type[LifecycleModel], set[int]]` — Return the IDs, by table, of the rows ``selection`` names: every row of each ticked feature, and each ticked row.
+- `chosen_hidden_rows(bind: Engine, member_id: Snowflake, selection: Selection, now: datetime) -> dict[type[LifecycleModel], set[int]]` — Return the IDs, by table, of the restorable rows ``selection`` names: all of each ticked feature, and each row.
 - `chosen_summary(chosen: dict[type[LifecycleModel], set[int]]) -> list[tuple[str, str]]` — Return each feature in ``chosen`` with how many rows of it are chosen, in words, features by name.
 
 ### `@dataclass class Feature`

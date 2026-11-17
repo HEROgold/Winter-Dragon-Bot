@@ -219,6 +219,10 @@ textarea.input { resize: vertical; min-height: 6rem; }
 .feature-choice input, .record-body input[type="checkbox"] { width: 1.1rem; height: 1.1rem; accent-color: var(--ember); }
 .selection-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem; }
 .notice { border-inline-start: 3px solid var(--route); padding: 0.5rem 0.75rem; background: var(--paper); margin-bottom: 1.5rem; }
+.delete-now { display: flex; align-items: flex-start; gap: 0.5rem; margin: 1rem 0; cursor: pointer; }
+.delete-now input { width: 1.1rem; height: 1.1rem; margin-top: 0.15rem; accent-color: var(--ember); }
+.hidden-entries { margin-top: 2.5rem; }
+.hidden-entries h2 { font-size: var(--step-2); margin-bottom: 0.5rem; }
 
 /* Privacy policy and terms of service: long text, so a reading width. */
 
