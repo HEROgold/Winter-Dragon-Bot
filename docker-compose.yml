@@ -106,7 +106,7 @@ services:
     networks:
       - default
 
-  # A dump a day, the newest 14 kept, next to the pre-migration ones.
+  # A dump a day, next to the pre-migration ones. Dumps older than 30 days go, and at most 14 of each kind stay.
   backup-daily:
     image: postgres:14-alpine
     command: ["sh", "-c", "while true; do sh /backup-db.sh daily; sleep 86400; done"]
