@@ -82,6 +82,13 @@ Hangman port and profile page.
 - `upgrade() -> None` — Apply this revision.
 - `downgrade() -> None` — Undo this revision.
 
+## `winter_dragon.migrations.versions.2026_10_26_fdbd33c005e3_incremental_game` — `src/winter_dragon/migrations/versions/2026_10_26_fdbd33c005e3_incremental_game.py`
+Incremental game.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
 ## `winter_dragon.migrations.versions.2026_10_30_2dbbfb633e0d_feat_autochannel_remember_settings_` — `src/winter_dragon/migrations/versions/2026_10_30_2dbbfb633e0d_feat_autochannel_remember_settings_.py`
 feat(autochannel): remember settings owners change in Discord.
 
@@ -134,6 +141,20 @@ team foreign keys.
 
 ## `winter_dragon.migrations.versions.2026_11_13_61db09c1eec4_tournament_foreign_keys` — `src/winter_dragon/migrations/versions/2026_11_13_61db09c1eec4_tournament_foreign_keys.py`
 tournament foreign keys.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_17_3eee35c48567_feat_web_delete_now_or_restore_within_` — `src/winter_dragon/migrations/versions/2026_11_17_3eee35c48567_feat_web_delete_now_or_restore_within_.py`
+feat(web): delete now, or restore within 30 days.
+
+- module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
+- `upgrade() -> None` — Apply this revision.
+- `downgrade() -> None` — Undo this revision.
+
+## `winter_dragon.migrations.versions.2026_11_17_a1c3e5d7f902_drop_the_incremental_game_tables` — `src/winter_dragon/migrations/versions/2026_11_17_a1c3e5d7f902_drop_the_incremental_game_tables.py`
+Drop the Incremental game's tables.
 
 - module names: revision: str, down_revision: str | None, branch_labels: str | None, depends_on: str | None
 - `upgrade() -> None` — Apply this revision.

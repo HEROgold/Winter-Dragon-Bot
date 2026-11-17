@@ -11,12 +11,30 @@ lazy from wd_bot.application import ApplicationId
 lazy from wd_bot.bot import invite_url
 lazy from wd_types.clock import utc_now
 
-lazy from winter_dragon.cogs.privacy.domain import RETENTION, DeletionStep, deletion_steps, hide_member_data
+lazy from winter_dragon.cogs.privacy.domain import (
+    RETENTION,
+    DeletionStep,
+    deletion_steps,
+    hide_member_data,
+    hide_member_rows,
+    restore_member_rows,
+)
 lazy from winter_dragon.cogs.reminder.domain import owned_reminders
 lazy from winter_dragon.config import Settings
 lazy from winter_dragon.web.accounts import SignedIn, checked_csrf, current_account, visitor_zone
 lazy from winter_dragon.web.formatting import plural
-lazy from winter_dragon.web.records import features, member_records, record_table
+lazy from winter_dragon.web.records import (
+    Selection,
+    chosen_hidden_rows,
+    chosen_rows,
+    chosen_summary,
+    features,
+    hidden_groups,
+    hidden_table,
+    member_records,
+    record_groups,
+    record_table,
+)
 lazy from winter_dragon.web.responses import Database, after_post, page_or_fragment, render
 
 
@@ -59,9 +77,11 @@ def _your_data(  # noqa: PLR0913 - the deletion section's state is part of what'
     *,
     confirming: bool = False,
     error: str | None = None,
+    notice: str | None = None,
+    choice: SelectionView | None = None,
     status_code: int = 200,
 ) -> Response:
-    """Render the data page: the member's records and where their deletion request stands.
+    """Render the data page: the member's records, what they ticked or can restore, and their deletion request.
 
     An htmx request gets only the part of it the template ``fragment`` holds.
     """
@@ -71,12 +91,23 @@ def _your_data(  # noqa: PLR0913 - the deletion section's state is part of what'
         fragment,
         status_code=status_code,
         retention_days=RETENTION.days,
-        records=list(member_records(bind, account.id)),
+        groups=list(record_groups(bind, account.id)),
+        hidden=list(hidden_groups(bind, account.id, utc_now())),
         progress=DeletionProgress(steps=tuple(deletion_steps(bind, account.id))),
         zone=visitor_zone(request),
         confirming=confirming,
         error=error,
+        notice=notice,
+        choice=choice,
     )
+
+
+@dataclass(frozen=True)
+class SelectionView:
+    """What the confirmation of a partial deletion shows: what was ticked, and how much of each feature goes."""
+
+    selection: Selection
+    summary: list[tuple[str, str]]
 
 
 @dataclass(frozen=True)
@@ -137,6 +168,82 @@ def record_rows(
     if table is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "There's no such record.")
     return render(request, "data/_record_table.html", table=table)
+
+
+def _selection(categories: list[str] | None, rows: list[str] | None) -> Selection:
+    """Return what the member ticked, from the data page's form."""
+    return Selection(categories=frozenset(categories or ()), rows=frozenset(rows or ()))
+
+
+@router.post("/me/selection/confirm", dependencies=[Depends(checked_csrf)])
+def selection_confirm(
+    request: Request,
+    account: SignedIn,
+    bind: Database,
+    category: Annotated[list[str] | None, Form()] = None,
+    row: Annotated[list[str] | None, Form()] = None,
+) -> Response:
+    """Show what deleting the ticked features and rows removes, and ask the member to confirm it."""
+    selection = _selection(category, row)
+    choice = SelectionView(selection=selection, summary=chosen_summary(chosen_rows(bind, account.id, selection)))
+    return _your_data(request, account, bind, "data/_selection.html", choice=choice)
+
+
+@router.post("/me/selection", dependencies=[Depends(checked_csrf)])
+def delete_selection(  # noqa: PLR0913 - one parameter per form field
+    request: Request,
+    account: SignedIn,
+    bind: Database,
+    category: Annotated[list[str] | None, Form()] = None,
+    row: Annotated[list[str] | None, Form()] = None,
+    *,
+    delete_now: Annotated[bool, Form()] = False,
+) -> Response:
+    """Hide the ticked features and rows of the member's data, by the rules of a deletion request.
+
+    They can be restored for :data:`RETENTION`, unless the member ticked ``delete_now``, which purges them at once.
+    """
+    chosen = chosen_rows(bind, account.id, _selection(category, row))
+    result = hide_member_rows(bind, account.id, chosen, utc_now(), delete_now=delete_now)
+    if not delete_now:
+        notice = f"Deleted {plural(result.done, 'entry')}. You can restore them below for {RETENTION.days} days."
+    elif result.still_hidden:
+        still = plural(result.still_hidden, "entry")
+        notice = (
+            f"Deleted {plural(result.done, 'entry')}. {still} still in use are hidden and removed in {RETENTION.days} days."
+        )
+    else:
+        notice = f"Deleted {plural(result.done, 'entry')} for good."
+    return after_post(request, "/me", lambda: _your_data(request, account, bind, "data/_your_data.html", notice=notice))
+
+
+@router.get("/me/hidden/{key}")
+def hidden_rows(
+    request: Request,
+    key: str,
+    account: SignedIn,
+    bind: Database,
+) -> Response:
+    """Show the signed-in member's deleted rows of the table ``key`` they can still restore, when its record is opened."""
+    table = hidden_table(bind, account.id, key, visitor_zone(request), utc_now())
+    if table is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "There's nothing to restore there.")
+    return render(request, "data/_record_table.html", table=table, form="restore")
+
+
+@router.post("/me/restore", dependencies=[Depends(checked_csrf)])
+def restore_selection(
+    request: Request,
+    account: SignedIn,
+    bind: Database,
+    category: Annotated[list[str] | None, Form()] = None,
+    row: Annotated[list[str] | None, Form()] = None,
+) -> Response:
+    """Bring back the ticked features and rows of what the member deleted, while they still can."""
+    now = utc_now()
+    chosen = chosen_hidden_rows(bind, account.id, _selection(category, row), now)
+    notice = f"Restored {plural(restore_member_rows(bind, account.id, chosen, now), 'entry')}."
+    return after_post(request, "/me", lambda: _your_data(request, account, bind, "data/_your_data.html", notice=notice))
 
 
 @router.get("/me/deletion")

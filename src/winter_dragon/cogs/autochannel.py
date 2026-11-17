@@ -32,6 +32,7 @@ lazy from wd_discord.resources.channel import ChannelParams, GuildChannelParams,
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap
 
+lazy from winter_dragon.data_categories import DataCategory
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed
 lazy from winter_dragon.voice_channels import EmptiedChannels, VoiceOccupancy
 
@@ -108,6 +109,8 @@ class AutoChannelOverwrite(LifecycleModel, table=True):
 
 
 AUTOCHANNEL_TABLES = (AutoChannelHub, AutoChannel, AutoChannelSettings, AutoChannelOverwrite)
+
+DataCategory("Voice channels", AUTOCHANNEL_TABLES)
 
 
 def owner_overwrite(user_id: Snowflake) -> OverwriteParams:

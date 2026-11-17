@@ -9,6 +9,8 @@ from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership, Through
 
+lazy from winter_dragon.data_categories import DataCategory
+
 
 MAX_WRONG_GUESSES = 10
 """How many wrong letters and wrong words a game allows before it is lost."""
@@ -74,3 +76,5 @@ class HangmanParticipant(LifecycleModel, table=True):
 
 
 HANGMAN_TABLES = (HangmanGame, HangmanParticipant)
+
+DataCategory("Hangman", HANGMAN_TABLES)

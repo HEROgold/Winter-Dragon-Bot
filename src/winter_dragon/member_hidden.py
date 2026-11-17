@@ -52,6 +52,20 @@ class MemberHiddenHook:
         """Yield the rows :meth:`on_member_hidden` removes that the member ``member_id`` doesn't own; none by default."""
         yield from ()
 
+    @classmethod
+    def on_rows_hidden(
+        cls,
+        session: Session,  # noqa: ARG003 - subclasses use them
+        member_id: Snowflake,  # noqa: ARG003
+        model: type[LifecycleModel],  # noqa: ARG003
+        ids: Collection[int],  # noqa: ARG003
+    ) -> set[int]:
+        """Clean up the rows ``ids`` of ``model`` the member ``member_id`` chose to delete; don't commit.
+
+        Return the IDs the hook dealt with; privacy hides or anonymises the rest by the usual rules. None by default.
+        """
+        return set()
+
     @staticmethod
     def _ready(stored: Collection[type[LifecycleModel]]) -> Generator[type[MemberHiddenHook]]:
         """Yield every registered hook whose :attr:`tables` are all in ``stored``."""
@@ -64,6 +78,20 @@ class MemberHiddenHook:
         """Call every registered hook whose :attr:`tables` are all in ``stored``, for the member ``member_id``."""
         for hook in MemberHiddenHook._ready(stored):
             hook.on_member_hidden(session, member_id)
+
+    @staticmethod
+    def rows_hidden_all(
+        session: Session,
+        member_id: Snowflake,
+        model: type[LifecycleModel],
+        ids: Collection[int],
+        stored: Collection[type[LifecycleModel]],
+    ) -> set[int]:
+        """Let every hook whose :attr:`tables` are all in ``stored`` clean up the chosen rows; return the IDs they took."""
+        handled: set[int] = set()
+        for hook in MemberHiddenHook._ready(stored):
+            handled |= hook.on_rows_hidden(session, member_id, model, [row_id for row_id in ids if row_id not in handled])
+        return handled
 
     @staticmethod
     def removed_by_all(member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> Generator[RemovedRows]:

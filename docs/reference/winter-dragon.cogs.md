@@ -349,6 +349,13 @@ The privacy tables, and the rules for hiding a member's or a guild's data, for t
 - `hide_owned(session: Session, models: Iterable[type[LifecycleModel]], now: datetime, *, member: Snowflake | None=None, guild: Snowflake | None=None) -> None` — Soft-delete at ``now`` every alive row of ``models`` owned by ``member`` and/or ``guild``.
 - `anonymise_member(session: Session, models: Iterable[type[LifecycleModel]], member_id: Snowflake) -> None` — Replace ``member_id`` with :data:`~wd_db.extension.lifecycle.DELETED_MEMBER` in every alive row's anonymised columns.
 - `hide_member_data(bind: Engine | Connection, member_id: Snowflake, now: datetime) -> bool` — Hide all of the member ``member_id``'s data at ``now``, for their deletion request; ``False`` if it was already.
+- `removable_rows[M: LifecycleModel](model: type[M], member_id: Snowflake, stored: Collection[type[LifecycleModel]]) -> SelectOfScalar[M]` — Select the ``model`` rows a deletion request by ``member_id`` removes: owned, hook-removed and anonymised rows.
+- `removable_only(bind: Engine | Connection, member_id: Snowflake, chosen: Mapping[type[LifecycleModel], Collection[int]]) -> dict[type[LifecycleModel], set[int]]` — Return ``chosen`` (IDs by table) with only the rows a deletion request by ``member_id`` removes.
+- `category_rows(bind: Engine | Connection, member_id: Snowflake, names: Collection[str]) -> dict[type[LifecycleModel], set[int]]` — Return the IDs of every row a deletion request by ``member_id`` removes, in the tables of the categories ``names``.
+- `hide_member_rows(bind: Engine | Connection, member_id: Snowflake, chosen: Mapping[type[LifecycleModel], Collection[int]], now: datetime, *, delete_now: bool=False) -> MemberRowsHidden` — Hide the rows ``chosen`` (IDs by table) of the member ``member_id``'s data at ``now``, as a deletion request would.
+- `purge_rows(bind: Engine | Connection, model: type[LifecycleModel], ids: Iterable[int]) -> list[tuple[int, Exception]]` — Hard-delete the ``model`` rows ``ids``, each on its own; return the IDs that failed, with why.
+- `restorable_rows(bind: Engine | Connection, member_id: Snowflake, now: datetime) -> dict[type[LifecycleModel], set[int]]` — Return the IDs, by table, of the rows the member ``member_id`` hid that they can still restore at ``now``.
+- `restore_member_rows(bind: Engine | Connection, member_id: Snowflake, chosen: Mapping[type[LifecycleModel], Collection[int]], now: datetime) -> int` — Bring back the rows ``chosen`` (IDs by table) the member ``member_id`` hid; return how many came back.
 - `deletion_steps(bind: Engine | Connection, member_id: Snowflake) -> Generator[tuple[DeletionStep, datetime]]` — Yield the steps the member ``member_id``'s deletion request got through, with when, in order.
 
 ### `class DepartedGuild(DiscordKeyedModel, table=True)`
@@ -377,6 +384,16 @@ How often a member ran a command in a guild on one UTC day; the member owns it, 
 How often a member ran ``command`` in the guild ``guild_id`` (``None`` for a DM) on ``day``.
 
 - fields: command: str, guild_id: Snowflake | None, day: date, count: int
+
+### `class HiddenEntry(LifecycleModel, table=True)`
+A row a member hid from Your data, which they can restore until :data:`RETENTION` after ``hidden_at``.
+
+- fields: user_id: int, table_name: str, row_id: int, hidden_at: datetime
+
+### `@dataclass class MemberRowsHidden`
+What :func:`hide_member_rows` did with the chosen rows.
+
+- fields: done: int, still_hidden: int
 
 ## `winter_dragon.cogs.reminder.cog` — `src/winter_dragon/cogs/reminder/cog.py`
 The /reminder command group: one-off and repeating reminders, sent as DMs by a background task.
@@ -802,6 +819,7 @@ A member whose data is hidden leaves each of their teams, by the rule ``/team le
 
 - attributes: tables
 - `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Take the member ``member_id`` out of every team they're in, handing over captaincies.
+- `@classmethod on_rows_hidden(session: Session, member_id: Snowflake, model: type[LifecycleModel], ids: Collection[int]) -> set[int]` — Take the member ``member_id`` out of the team of each chosen membership, handing over its captaincy.
 
 ## `winter_dragon.cogs.team.split` — `src/winter_dragon/cogs/team/split.py`
 Splitting members into teams: pure arithmetic, no database, no Discord.
@@ -1091,6 +1109,7 @@ A member whose data is hidden leaves each tournament that hasn't started.
 - attributes: tables
 - `@classmethod on_member_hidden(session: Session, member_id: Snowflake) -> None` — Take the member ``member_id`` out of every tournament they're in that hasn't started.
 - `@classmethod removes(member_id: Snowflake) -> Generator[RemovedRows]` — Yield the entries the member ``member_id`` is the only player of, in tournaments that haven't started.
+- `@classmethod on_rows_hidden(session: Session, member_id: Snowflake, model: type[LifecycleModel], ids: Collection[int]) -> set[int]` — Take the member ``member_id`` out of the tournaments in sign-up that the chosen places are in.
 
 ### `@dataclass class PhaseContext`
 What a match step acts on: the session, the match, who took the step, and the winner it names.

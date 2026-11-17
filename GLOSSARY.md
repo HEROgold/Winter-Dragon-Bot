@@ -118,6 +118,34 @@ _Avoid_: Roster (for one match), stand-ins
 A message showing a tournament in one channel of its guild, with its signup and bracket. A tournament can have posts in many channels.
 _Avoid_: Announcement, tournament channel
 
+## Clash
+
+League of Legends' own team tournaments, run by Riot in the game client, which a guild prepares for and follows in Discord.
+
+**Clash**:
+One of Riot's Clash events, such as Worlds Clash or the ARAM Freljord Cup, held over one weekend in each region.
+_Avoid_: Cup (alone), Clash tournament, Clash week
+
+**Clash day**:
+One day of a Clash in one region, which Riot runs as its own tournament.
+_Avoid_: Clash tournament, Day 1/Day 2 (alone)
+
+**Clash registration**:
+A guild's preparation for one Clash day: the teams it enters, their members' confirmations, and its clash pool. It is not a tournament; a tournament starts once Riot puts the guild's teams in a bracket.
+_Avoid_: Clash signup, Clash tournament
+
+**Confirmation**:
+A member's answer, for one Clash day, that they will or won't play for the tournament entry that lists them. No answer by the deadline counts as won't.
+_Avoid_: Ready, check-in, RSVP
+
+**Clash pool**:
+The members who signed up alone for a Clash day, without a team.
+_Avoid_: Solo queue, free agents, LFG
+
+**Bench**:
+The members who signed up or confirmed for a Clash day but aren't in any lineup that day.
+_Avoid_: Stand-ins, spares, reserves
+
 ## Member stats
 
 **Profile**:

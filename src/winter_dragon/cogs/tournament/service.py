@@ -48,7 +48,7 @@ lazy from .models import (
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Generator, Iterable, Sequence
+    lazy from collections.abc import Collection, Generator, Iterable, Sequence
     lazy from datetime import datetime
     lazy from random import Random
 
@@ -169,7 +169,7 @@ def matches_of(session: Session, tournament: Tournament) -> list[TournamentMatch
     return list(session.exec(query))
 
 
-def _id(record: Tournament | Team | TournamentEntry | TournamentMatch | MatchVote) -> int:
+def _id(record: Tournament | Team | TournamentEntry | TournamentMatch | MatchVote | TournamentSignup | EntryPlayer) -> int:
     """Return a stored record's ID."""
     if record.id is None:
         msg = f"{type(record).__name__} isn't stored yet"
@@ -308,6 +308,70 @@ class WithdrawHiddenMember(MemberHiddenHook):
             )
         )
         yield RemovedRows(TournamentEntry, sole)
+
+    @classmethod
+    @override
+    def on_rows_hidden(
+        cls,
+        session: Session,
+        member_id: Snowflake,
+        model: type[LifecycleModel],
+        ids: Collection[int],
+    ) -> set[int]:
+        """Take the member ``member_id`` out of the tournaments in sign-up that the chosen places are in.
+
+        A chosen place alone or in an entry goes, and an entry left without players is withdrawn; a chosen entry is
+        withdrawn whole. Places in tournaments that have started are left to the usual rules.
+        """
+        table = model.__table__.name
+        if table == TournamentSignup.__table__.name:
+            return _drop_signups(session, ids)
+        if table == EntryPlayer.__table__.name:
+            return _drop_players(session, ids)
+        if table == TournamentEntry.__table__.name:
+            return _drop_entries(session, ids)
+        return set()
+
+
+def _drop_signups(session: Session, ids: Collection[int]) -> set[int]:
+    """Soft-delete the solo sign-ups ``ids`` in tournaments still in sign-up; return the IDs dropped."""
+    dropped: set[int] = set()
+    for signup in session.exec(alive(TournamentSignup).where(col(TournamentSignup.id).in_(ids))).all():
+        if _in_signup(session, signup.tournament_id):
+            soft_delete(session, signup)
+            dropped.add(_id(signup))
+    return dropped
+
+
+def _drop_players(session: Session, ids: Collection[int]) -> set[int]:
+    """Soft-delete the places ``ids`` in entries of tournaments still in sign-up, withdrawing entries left empty."""
+    dropped: set[int] = set()
+    for player in session.exec(alive(EntryPlayer).where(col(EntryPlayer.id).in_(ids))).all():
+        entry = alive_by_id(session, TournamentEntry, player.entry_id)
+        if entry is None or not _in_signup(session, entry.tournament_id):
+            continue
+        soft_delete(session, player)
+        session.flush()
+        if not roster(session, entry):
+            _withdraw_entry(session, entry)
+        dropped.add(_id(player))
+    return dropped
+
+
+def _drop_entries(session: Session, ids: Collection[int]) -> set[int]:
+    """Withdraw the entries ``ids`` of tournaments still in sign-up; return the IDs withdrawn."""
+    dropped: set[int] = set()
+    for entry in session.exec(alive(TournamentEntry).where(col(TournamentEntry.id).in_(ids))).all():
+        if _in_signup(session, entry.tournament_id):
+            _withdraw_entry(session, entry)
+            dropped.add(_id(entry))
+    return dropped
+
+
+def _in_signup(session: Session, tournament_id: int) -> bool:
+    """Whether the tournament ``tournament_id`` is alive and still in sign-up."""
+    tournament = alive_by_id(session, Tournament, tournament_id)
+    return tournament is not None and tournament.status is TournamentStatus.SIGNUP
 
 
 def _players_in(tournament: Tournament, user_id: Snowflake) -> SelectOfScalar[EntryPlayer]:

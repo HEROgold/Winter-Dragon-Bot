@@ -1,0 +1,35 @@
+{# What the member deleted from this page and can still restore; restoring re-renders #your-data. #}
+<section class="hidden-entries" aria-labelledby="hidden-title">
+  <h2 id="hidden-title">Deleted entries</h2>
+  <p class="secondary">You can restore these for {{ retention_days }} days after you deleted them. Entries with your name removed, and teams or tournaments you left, can't be restored.</p>
+  <form id="restore" method="post" action="/me/restore" hx-post="/me/restore" hx-target="#your-data" hx-swap="outerHTML">
+    <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+    {% for group in hidden %}
+      <section class="feature-group" aria-labelledby="hidden-feature-{{ loop.index }}">
+        <h3 class="feature-heading" id="hidden-feature-{{ loop.index }}">
+          <label class="feature-choice">
+            <input type="checkbox" name="category" value="{{ group.name }}" form="restore">
+            <span>{{ group.name }}</span>
+          </label>
+          <span class="secondary">{{ group.summary }}</span>
+        </h3>
+        <div class="records">
+          {% for record in group.records %}
+            <details class="record" hx-get="/me/hidden/{{ record.key }}" hx-trigger="toggle once" hx-target="#hidden-{{ record.key }}">
+              <summary>
+                <span class="record-name">{{ record.name }}</span>
+                <span class="secondary">{{ record.summary }}</span>
+                <span class="record-toggle"><span class="record-toggle-show">Show</span><span class="record-toggle-hide">Hide</span></span>
+              </summary>
+              <div class="record-body" id="hidden-{{ record.key }}"><p class="secondary">Loading…</p></div>
+            </details>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+    <p class="selection-actions">
+      <button class="button" type="submit">Restore selected</button>
+      <span class="secondary">Tick a feature to restore all of it, or open a table and tick single entries.</span>
+    </p>
+  </form>
+</section>

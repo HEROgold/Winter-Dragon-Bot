@@ -169,6 +169,14 @@ def test_the_legal_pages_open_without_signing_in(client: TestClient, path: str, 
     assert "github.com/HEROgold/Winter-Dragon-Bot/issues" in page.text
 
 
+@pytest.mark.parametrize("path", ["/oauth/login", "/oauth/logout"])
+def test_the_oauth_routes_show_the_maintenance_page(client: TestClient, path: str) -> None:
+    page = client.get(path, follow_redirects=False)
+
+    assert page.status_code == 503
+    assert '<h1 class="page-title">Under construction</h1>' in page.text
+
+
 def test_the_privacy_policy_names_who_runs_the_bot_and_who_else_sees_the_data(client: TestClient) -> None:
     text = html.unescape(client.get("/privacy").text)
 
@@ -292,6 +300,174 @@ def test_the_data_page_lists_the_teams_deleting_your_data_disbands(member: TestC
     assert "Tournament entry" in page
     assert "open team" in rows
     assert "started team" not in rows  # leaving a started tournament doesn't disband the team
+
+
+def test_the_data_page_groups_your_records_by_feature(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        CompatibilityCheck(user_id=MEMBER_ID, target_id=OTHER_ID, target_name="Rival"),
+    )
+
+    page = member.get("/me").text
+
+    assert '<input type="checkbox" name="category" value="Reminders">' in page
+    assert '<input type="checkbox" name="category" value="Compatibility checks">' in page
+    assert page.index('value="Compatibility checks"') < page.index('value="Reminders"')  # features by name
+
+
+def test_each_entry_has_a_box_to_tick(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=5, content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)))
+
+    rows = member.get("/me/records/reminder", headers=HTMX).text
+
+    assert 'name="row" value="reminder:5" form="selection"' in rows
+
+
+def _ticked(member: TestClient, path: str, **ticked: list[str]) -> str:
+    return member.post(path, data={"csrf_token": _csrf(member), **ticked}, headers=HTMX).text
+
+
+def test_deleting_a_ticked_feature_asks_first_and_names_what_goes(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(content="one", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        Reminder(content="two", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)),
+    )
+
+    confirm = _ticked(member, "/me/selection/confirm", category=["Reminders"])
+
+    assert "<strong>Reminders</strong>: 2 entries" in confirm
+    assert '<input type="hidden" name="category" value="Reminders">' in confirm
+    assert sorted(_alive_contents(bind)) == ["one", "two"]  # nothing is deleted before confirming
+
+
+def test_deleting_a_ticked_feature_hides_all_of_it_and_nothing_else(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(content="one", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        CompatibilityCheck(user_id=MEMBER_ID, target_id=OTHER_ID, target_name="Rival"),
+    )
+
+    page = _ticked(member, "/me/selection", category=["Reminders"])
+
+    assert "Deleted 1 entry" in page
+    assert _alive_contents(bind) == []
+    with Session(bind) as session:
+        assert len(session.exec(alive(CompatibilityCheck)).all()) == 1
+
+
+def test_deleting_ticked_entries_hides_only_those(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(id=1, content="keep", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        Reminder(id=2, content="drop", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)),
+    )
+
+    _ticked(member, "/me/selection", row=["reminder:2"])
+
+    assert _alive_contents(bind) == ["keep"]
+
+
+def test_ticking_someone_else_s_entry_deletes_nothing(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=1, content="theirs", user_id=OTHER_ID, timestamp=NOW + timedelta(days=1)))
+
+    page = _ticked(member, "/me/selection", row=["reminder:1", "nonsense:x"])
+
+    assert "Deleted 0 entries" in page
+    assert _alive_contents(bind) == ["theirs"]
+
+
+def test_the_confirmation_counts_only_what_deleting_removes(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=1, content="theirs", user_id=OTHER_ID, timestamp=NOW + timedelta(days=1)))
+
+    confirm = _ticked(member, "/me/selection/confirm", row=["reminder:1"])
+
+    assert "Nothing is ticked" in confirm
+
+
+def test_without_htmx_the_confirmation_is_part_of_the_whole_page(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)))
+
+    page = member.post("/me/selection/confirm", data={"csrf_token": _csrf(member), "category": ["Reminders"]}).text
+
+    assert '<h1 class="page-title">Your data</h1>' in page
+    assert "<strong>Reminders</strong>: 1 entry" in page
+
+
+def test_the_confirmation_states_the_30_day_default_and_offers_to_delete_now(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(content="mine", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)))
+
+    confirm = _ticked(member, "/me/selection/confirm", category=["Reminders"])
+
+    assert "deleted for good 30 days later" in confirm
+    assert '<input type="checkbox" name="delete_now" value="true">' in confirm
+
+
+def _stored_contents(bind: Engine) -> list[str]:
+    with Session(bind) as session:
+        return sorted(row.content for row in session.exec(select(Reminder)))
+
+
+def test_deleting_now_purges_the_ticked_entries_at_once(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(id=1, content="keep", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        Reminder(id=2, content="drop", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)),
+    )
+
+    page = _ticked(member, "/me/selection", row=["reminder:2"], delete_now=["true"])
+
+    assert "Deleted 1 entry for good" in page
+    assert _stored_contents(bind) == ["keep"]
+    assert "Deleted entries" not in page  # nothing left to restore
+
+
+def test_deleted_entries_are_listed_to_restore(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=2, content="drop", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)))
+
+    page = _ticked(member, "/me/selection", row=["reminder:2"])
+    rows = member.get("/me/hidden/reminder", headers=HTMX).text
+
+    assert "Deleted entries" in page
+    assert '<input type="checkbox" name="category" value="Reminders" form="restore">' in page
+    assert 'name="row" value="reminder:2" form="restore"' in rows
+    assert "drop" in rows
+
+
+def test_restoring_an_entry_brings_it_back_on_the_data_page(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=2, content="drop", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)))
+    _ticked(member, "/me/selection", row=["reminder:2"])
+
+    page = _ticked(member, "/me/restore", row=["reminder:2"])
+
+    assert "Restored 1 entry" in page
+    assert _alive_contents(bind) == ["drop"]
+    assert '<input type="checkbox" name="category" value="Reminders">' in page
+    assert "Deleted entries" not in page
+
+
+def test_restoring_a_ticked_feature_brings_back_all_of_it(member: TestClient, bind: Engine) -> None:
+    seed(
+        bind,
+        Reminder(content="one", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=1)),
+        Reminder(content="two", user_id=MEMBER_ID, timestamp=NOW + timedelta(days=2)),
+    )
+    _ticked(member, "/me/selection", category=["Reminders"])
+
+    page = _ticked(member, "/me/restore", category=["Reminders"])
+
+    assert "Restored 2 entries" in page
+    assert sorted(_alive_contents(bind)) == ["one", "two"]
+
+
+def test_someone_else_s_hidden_entry_can_not_be_restored(member: TestClient, bind: Engine) -> None:
+    seed(bind, Reminder(id=1, content="theirs", user_id=OTHER_ID, timestamp=NOW, deleted_at=NOW))
+
+    page = _ticked(member, "/me/restore", row=["reminder:1"])
+
+    assert "Restored 0 entries" in page
+    assert _alive_contents(bind) == []
 
 
 def test_a_record_that_does_not_exist_is_not_found(member: TestClient) -> None:
@@ -599,7 +775,7 @@ def test_profile_tabs_without_anything_for_you_come_last_and_are_dimmed(member: 
     tabs = _tabs(member)
 
     in_use = [slug for slug, dimmed in tabs if not dimmed]
-    assert in_use == ["incremental", "reminders"]  # useful when empty
+    assert in_use == ["reminders"]  # useful when empty
     assert [slug for slug, _ in tabs][: len(in_use)] == in_use
     assert {"love", "fuel", "steam", "urban", "hangman", "teams"} <= {slug for slug, dimmed in tabs if dimmed}
 
