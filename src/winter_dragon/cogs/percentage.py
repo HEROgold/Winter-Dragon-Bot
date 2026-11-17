@@ -20,6 +20,7 @@ lazy from wd_discord.embed import Embed, EmbedField
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.data_categories import DataCategory
 
 
 if TYPE_CHECKING:
@@ -103,3 +104,6 @@ class Love(Cog):
             record_check(session, asker.id, user.id, user.display_name)
             session.commit()
         await interaction.respond(embeds=[build_love_embed(user, percent)])
+
+
+DataCategory("Compatibility checks", (CompatibilityCheck,))

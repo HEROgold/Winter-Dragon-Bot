@@ -30,6 +30,7 @@ lazy from winter_dragon.cogs.team.cog import Teams
 lazy from winter_dragon.cogs.team.models import Team, TeamOrigin
 lazy from winter_dragon.cogs.team.service import create_temporary_teams, end_team, membership
 lazy from winter_dragon.cogs.team.split import split_into
+lazy from winter_dragon.data_categories import DataCategory
 lazy from winter_dragon.stored import stored
 lazy from winter_dragon.voice_channels import EmptiedChannels, VoiceOccupancy
 
@@ -48,6 +49,8 @@ class TeamVoiceChannel(DiscordKeyedModel, table=True):
 
 
 VOICE_TABLES = (TeamVoiceChannel,)
+
+DataCategory("Team voice channels", VOICE_TABLES)
 CHANNEL_REFUSAL = "I couldn't create your team's channel; do I have the Manage Channels permission?"
 """What a member hears when their team's voice channel can't be made."""
 

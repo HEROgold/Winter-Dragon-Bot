@@ -1,6 +1,9 @@
 {% from "_components.html" import table as data_table %}
-{% call data_table(table.columns) %}
+{% call data_table(["Delete"] + table.columns | list) %}
   {% for row in table.rows %}
-    <tr>{% for value in row %}<td>{{ value }}</td>{% endfor %}</tr>
+    <tr>
+      <td><input type="checkbox" name="row" value="{{ table.key }}:{{ row.id }}" form="selection" aria-label="Delete this entry"></td>
+      {% for value in row.values %}<td>{{ value }}</td>{% endfor %}
+    </tr>
   {% endfor %}
 {% endcall %}

@@ -28,6 +28,15 @@ The bot stores only what a feature needs. It does not copy messages, presence or
   - Each step is recorded so Your data shows the request's progress.
 - **Status:** New.
 
+## A member deletes part of their data
+
+- **Who:** any member, from Your data on the dashboard.
+- **Rules:**
+  - Your data groups the member's records by feature. Each feature registers its own tables under a name, in its own module; a table no feature registers shows under its cog package's name.
+  - The member ticks whole features, single entries, or both, and confirms on a step that lists how many entries of each feature go. Only entries a full deletion would remove count, so a member can't delete someone else's data.
+  - Deleting follows the rules of a full deletion: a feature's hook cleans up first (leaving a team hands its captaincy over, a place in a tournament in sign-up is withdrawn), an entry in someone else's history keeps its row with the member's ID removed, and every other entry is hidden at once and purged 30 days later.
+- **Status:** New.
+
 ## A guild removes the bot
 
 - **Rules:**

@@ -167,6 +167,8 @@ The landing page, and the data page: everything the bot stores about the signed-
 - `@router.get landing(request: Request, bind: Database) -> Response` — Show what the bot does, with the way in: signing in, or adding it to a server.
 - `@router.get data_page(request: Request, account: SignedIn, bind: Database) -> Response` — Show everything the bot stores about the signed-in member, and the way to delete it.
 - `@router.get record_rows(request: Request, key: str, account: SignedIn, bind: Database) -> Response` — Show the signed-in member's rows of the table ``key``, when its record is opened.
+- `@router.post selection_confirm(request: Request, account: SignedIn, bind: Database, category: list[str] | None=None, row: list[str] | None=None) -> Response` — Show what deleting the ticked features and rows removes, and ask the member to confirm it.
+- `@router.post delete_selection(request: Request, account: SignedIn, bind: Database, category: list[str] | None=None, row: list[str] | None=None) -> Response` — Hide the ticked features and rows of the member's data, by the rules of a deletion request.
 - `@router.get deletion_ask(request: Request, account: SignedIn, bind: Database) -> Response` — Show the deletion section as it first is: what deleting does, and the button to start.
 - `@router.get deletion_confirm(request: Request, account: SignedIn, bind: Database) -> Response` — Ask the member to type their username, to confirm they mean to delete their data.
 - `@router.post request_deletion(request: Request, account: SignedIn, bind: Database, confirm_name: str='') -> Response` — Hide all of the member's data for their deletion request, once they typed their username to confirm it.
@@ -177,6 +179,11 @@ How far the member's latest deletion request got: each step done, with when.
 - fields: steps: tuple[tuple[DeletionStep, datetime], ...]
 - `@property pending -> bool` — Whether a request is in progress: their data is hidden, but not purged for good yet.
 - `@property purge_due -> datetime | None` — When the data of a pending request is purged for good; ``None`` without one.
+
+### `@dataclass class SelectionView`
+What the confirmation of a partial deletion shows: what was ticked, and how much of each feature goes.
+
+- fields: selection: Selection, summary: list[tuple[str, str]]
 
 ### `@dataclass class Signposts`
 What the landing page's signpost arms say a signed-in member will find down each way.
@@ -339,7 +346,10 @@ What the dashboard shows of the bot: the features its cogs define, and every rec
 - `create_dashboard_tables(bind: Engine) -> None` — Make sure the tables the dashboard writes to exist (deletion requests and reminders), as the bot's cogs do.
 - `features() -> Generator[Feature]` — Yield every command group the app's cogs define, by name; call :func:`~winter_dragon.cogs.import_cogs` first.
 - `member_records(bind: Engine, member_id: Snowflake) -> Generator[DataRecord]` — Yield a record for every table holding rows a deletion request by the member ``member_id`` removes, by name.
+- `record_groups(bind: Engine, member_id: Snowflake) -> Generator[RecordGroup]` — Yield the member ``member_id``'s records grouped by feature, features and tables by name.
 - `record_table(bind: Engine, member_id: Snowflake, key: str, zone: ZoneInfo) -> RecordTable | None` — Return the rows of the table ``key`` a deletion request by the member ``member_id`` removes, times in ``zone``.
+- `chosen_rows(bind: Engine, member_id: Snowflake, selection: Selection) -> dict[type[LifecycleModel], set[int]]` — Return the IDs, by table, of the rows ``selection`` names: every row of each ticked feature, and each ticked row.
+- `chosen_summary(chosen: dict[type[LifecycleModel], set[int]]) -> list[tuple[str, str]]` — Return each feature in ``chosen`` with how many rows of it are chosen, in words, features by name.
 
 ### `@dataclass class Feature`
 A command group the bot offers: ``/name``, and what it does.
@@ -354,11 +364,28 @@ One table's worth of what the bot stores about a member: which table, and how ma
 - `@property key -> str` — The table's name, which the page asks for the rows by.
 - `@property name -> str` — The table's name in words.
 - `@property summary -> str` — How many rows there are, in words.
+- `@property category -> str` — The name of the feature the table belongs to.
+
+### `@dataclass class RecordGroup`
+The records of one feature, as the data page groups them.
+
+- fields: name: str, records: tuple[DataRecord, ...]
+- `@property summary -> str` — How many rows the feature's tables hold, in words.
+
+### `@dataclass class RecordRow`
+One row of a record: its ID, which its checkbox names, and its values as the page shows them.
+
+- fields: id: int, values: tuple[str, ...]
 
 ### `@dataclass class RecordTable`
 The rows of one :class:`DataRecord`, as the data page shows them.
 
-- fields: columns: tuple[str, ...], rows: tuple[tuple[str, ...], ...]
+- fields: key: str, columns: tuple[str, ...], rows: tuple[RecordRow, ...]
+
+### `@dataclass class Selection`
+What a member ticked on the data page: whole features by name, and single rows as ``table:id``.
+
+- fields: categories: frozenset[str], rows: frozenset[str]
 
 ## `winter_dragon.web.redirect` — `src/winter_dragon/web/redirect.py`
 The redirect page: opens an app link (``steam://...``) from Discord, which only makes http(s) links clickable.

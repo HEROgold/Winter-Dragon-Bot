@@ -9,6 +9,8 @@ from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership, Through
 
+lazy from winter_dragon.data_categories import DataCategory
+
 
 class TeamMode(StrEnum):
     """How a tournament's teams are formed."""
@@ -248,3 +250,5 @@ TOURNAMENT_TABLES = (
     MatchVote,
     MatchBallot,
 )
+
+DataCategory("Tournaments", TOURNAMENT_TABLES)

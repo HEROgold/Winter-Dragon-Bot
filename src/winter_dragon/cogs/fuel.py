@@ -23,6 +23,7 @@ lazy from wd_discord.interactions import ApplicationCommandOptionChoice
 lazy from wd_errors import Refused
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.data_categories import DataCategory
 lazy from winter_dragon.ui import CreatedEmbed
 
 
@@ -250,3 +251,6 @@ class Fuel(GroupCog, name="fuel", description="Track your car's refuels and fuel
             upsert(session, FuelPreferences(id=int(user.id), units=chosen))
             session.commit()
         await interaction.respond(f"Your fuel efficiency is now shown in {chosen}.", ephemeral=True)
+
+
+DataCategory("Fuel", (CarFuels, FuelPreferences))

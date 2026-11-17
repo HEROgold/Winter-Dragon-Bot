@@ -17,9 +17,10 @@ lazy from .models import Team, TeamKind, TeamMember, TeamOrigin
 
 
 if TYPE_CHECKING:
-    lazy from collections.abc import Generator, Sequence
+    lazy from collections.abc import Collection, Generator, Sequence
     lazy from datetime import datetime, timedelta
 
+    lazy from wd_db.extension.lifecycle import LifecycleModel
     lazy from wd_discord.snowflake import Snowflake
 
 
@@ -207,3 +208,24 @@ class LeaveHiddenMember(MemberHiddenHook):
         """Take the member ``member_id`` out of every team they're in, handing over captaincies."""
         for team in list(teams_of(session, member_id)):
             leave(session, team, member_id)
+
+    @classmethod
+    @override
+    def on_rows_hidden(
+        cls,
+        session: Session,
+        member_id: Snowflake,
+        model: type[LifecycleModel],
+        ids: Collection[int],
+    ) -> set[int]:
+        """Take the member ``member_id`` out of the team of each chosen membership, handing over its captaincy."""
+        if model.__table__.name != TeamMember.__table__.name:
+            return set()
+        handled: set[int] = set()
+        memberships = Repository[TeamMember](session).qs().where(col(TeamMember.id).in_(ids)).all()
+        for membership_row in memberships:
+            team = Repository[Team](session).qs().filter_by(id=membership_row.team_id).first()
+            if team is not None and membership_row.id is not None:
+                leave(session, team, member_id)
+                handled.add(membership_row.id)
+        return handled

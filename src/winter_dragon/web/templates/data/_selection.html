@@ -1,0 +1,21 @@
+{# The confirmation step for deleting ticked features and entries; deleting re-renders #your-data. #}
+<section class="danger-zone" aria-labelledby="selection-title">
+  {% if not choice.summary %}
+    <p class="secondary" id="selection-title">Nothing is ticked. Tick a feature or an entry first.</p>
+  {% else %}
+    <h2 id="selection-title">Delete the selected data</h2>
+    <ul>
+      {% for name, count in choice.summary %}<li><strong>{{ name }}</strong>: {{ count }}</li>{% endfor %}
+    </ul>
+    <p>The selected data is hidden at once and deleted for good {{ retention_days }} days later. An entry that is part of someone else's history, such as a match you played, stays with your name removed.</p>
+    <form class="confirm" method="post" action="/me/selection" hx-post="/me/selection" hx-target="#your-data" hx-swap="outerHTML">
+      <input type="hidden" name="{{ csrf_field }}" value="{{ csrf_token }}">
+      {% for name in choice.selection.categories | sort %}<input type="hidden" name="category" value="{{ name }}">{% endfor %}
+      {% for row in choice.selection.rows | sort %}<input type="hidden" name="row" value="{{ row }}">{% endfor %}
+      <div class="confirm-actions">
+        <button class="button button-danger" type="submit">Delete</button>
+        <a class="button button-quiet" href="/me">Keep it</a>
+      </div>
+    </form>
+  {% endif %}
+</section>

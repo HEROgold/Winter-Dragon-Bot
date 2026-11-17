@@ -26,6 +26,7 @@ lazy from wd_discord.limits import (
 lazy from wd_errors import BaseError, Refused
 
 lazy from winter_dragon.config import CogConfig
+lazy from winter_dragon.data_categories import DataCategory
 
 
 if TYPE_CHECKING:
@@ -193,3 +194,6 @@ class Urban(GroupCog, name="urban", description="Look up words on Urban Dictiona
         if isinstance(definitions, LookupFailed):
             raise Refused(str(definitions))
         await interaction.respond(embeds=[build_embed("Urban Dictionary: random", definitions, UrbanSettings.max_definitions)])
+
+
+DataCategory("Urban Dictionary", (Lookup,))
