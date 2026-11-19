@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_PYTHON_DOWNLOADS=never
 
 # Copy uv binary from official image
-COPY --from=docker.io/astral/uv:0.11.7 /uv /uvx /bin/
+COPY --from=docker.io/astral/uv:0.13.0 /uv /uvx /bin/
 
 WORKDIR /app
 
