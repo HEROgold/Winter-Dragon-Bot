@@ -6,15 +6,15 @@ The guilds are only used to decide which cards the member may open, and live in 
 """
 
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 lazy from urllib.parse import urlencode
 
 from wd_discord.authenticate import URL
+from wd_discord.log import get_logger
 lazy from wd_bot.application import ApplicationId
 lazy from wd_config.discord import URLS
 lazy from wd_discord import Client, Token, TokenType, is_network_error
 lazy from wd_discord.authenticate import client_credentials
-lazy from wd_discord.log import get_logger
 lazy from wd_discord.oauth import OAuthScopes, exchange_code, revoke_token
 
 lazy from winter_dragon.web.settings import DashboardSettings

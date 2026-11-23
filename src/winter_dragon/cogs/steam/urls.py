@@ -1,8 +1,8 @@
 """Steam store URLs, and the IDs of the store items they point at."""
 
-lazy import re
-lazy from dataclasses import dataclass
-lazy from enum import StrEnum
+import re
+from dataclasses import dataclass
+from enum import StrEnum
 
 
 STORE_URL = "https://store.steampowered.com/"

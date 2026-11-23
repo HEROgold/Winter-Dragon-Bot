@@ -12,7 +12,7 @@ from wd_db.extension.lifecycle import DiscordKeyedModel, LifecycleModel, Ownersh
 from wd_types.clock import utc_now
 
 from winter_dragon.cogs.steam.urls import SteamURL
-lazy from winter_dragon.data_categories import DataCategory
+from winter_dragon.data_categories import DataCategory
 
 
 class SaleTypes(StrEnum):

@@ -7,13 +7,13 @@ A request that fails is logged and skipped, so one bad answer never stops a scra
 :class:`RequestThrottle`, so a scrape never sends requests fast enough to get rate-limited.
 """
 
+from dataclasses import dataclass
 lazy import json
-lazy from dataclasses import dataclass
 lazy from enum import Enum, auto
 lazy from itertools import batched
 lazy from typing import TYPE_CHECKING, Self
 
-lazy from herogold.log import LoggerMixin
+from herogold.log import LoggerMixin
 lazy from httpxyz import AsyncClient, RequestError
 lazy from pydantic import ValidationError
 

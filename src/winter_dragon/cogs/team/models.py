@@ -1,7 +1,7 @@
 """The team tables: a team and its members, lasting or temporary."""
 
 from datetime import datetime
-lazy from enum import StrEnum
+from enum import StrEnum
 lazy from typing import ClassVar
 
 from sqlalchemy import BigInteger
@@ -9,7 +9,7 @@ from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership
 
-lazy from winter_dragon.data_categories import DataCategory
+from winter_dragon.data_categories import DataCategory
 
 
 class TeamKind(StrEnum):

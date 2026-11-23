@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 lazy import asyncio
 lazy from typing import TYPE_CHECKING, Self
 
+from wd_discord.log import get_logger
 lazy from wd_discord import Client, Token, is_network_error
-lazy from wd_discord.log import get_logger
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_types.clock import utc_now
 

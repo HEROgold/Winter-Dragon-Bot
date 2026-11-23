@@ -1,7 +1,7 @@
 """The tournament tables: a tournament, its teams and players, its bracket's matches, their drafts and votes."""
 
 from datetime import datetime
-lazy from enum import StrEnum
+from enum import StrEnum
 lazy from typing import ClassVar
 
 from sqlalchemy import BigInteger, ForeignKey
@@ -9,7 +9,7 @@ from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership, Through
 
-lazy from winter_dragon.data_categories import DataCategory
+from winter_dragon.data_categories import DataCategory
 
 
 class TeamMode(StrEnum):

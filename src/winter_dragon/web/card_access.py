@@ -6,7 +6,7 @@ could already see there, so it applies the same rules.
 """
 
 from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.resources.channel import OverwriteType

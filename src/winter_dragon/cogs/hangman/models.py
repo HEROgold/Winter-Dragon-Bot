@@ -1,7 +1,7 @@
 """The hangman tables: a game, and the members who took part in it."""
 
 from datetime import datetime
-lazy from enum import StrEnum
+from enum import StrEnum
 lazy from typing import ClassVar
 
 from sqlalchemy import BigInteger
@@ -9,7 +9,7 @@ from sqlmodel import Field
 from wd_db.extension.columns import AwareDateTime
 from wd_db.extension.lifecycle import LifecycleModel, Ownership, Through
 
-lazy from winter_dragon.data_categories import DataCategory
+from winter_dragon.data_categories import DataCategory
 
 
 MAX_WRONG_GUESSES = 10

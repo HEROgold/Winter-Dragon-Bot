@@ -1,8 +1,8 @@
 """The rules of hangman: starting a game, and what a guess does to it."""
 
-lazy from enum import StrEnum
-lazy from pathlib import Path
-lazy from typing import TYPE_CHECKING
+from enum import StrEnum
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 lazy from sqlmodel import col
 lazy from wd_db.extension.lifecycle import alive, upsert

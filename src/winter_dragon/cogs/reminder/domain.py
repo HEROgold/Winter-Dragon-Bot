@@ -10,8 +10,8 @@ from wd_db.extension.lifecycle import LifecycleModel, Ownership
 lazy from wd_db.extension.lifecycle import owned_by
 lazy from wd_errors import Refused
 
-lazy from winter_dragon.config import CogConfig
-lazy from winter_dragon.data_categories import DataCategory
+from winter_dragon.config import CogConfig
+from winter_dragon.data_categories import DataCategory
 
 
 if TYPE_CHECKING:

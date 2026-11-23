@@ -1,9 +1,9 @@
 """The app's own config scopes: app-wide settings in ``config.ini``, cog settings in ``cogs.ini``."""
 
-lazy import logging
+import logging
 
+from wd_config import Config as BaseConfig
 lazy from confkit.data_types import Hex, List
-lazy from wd_config import Config as BaseConfig
 lazy from wd_config.constants import APP_CONFIG_FILE, COGS_CONFIG_FILE
 
 
