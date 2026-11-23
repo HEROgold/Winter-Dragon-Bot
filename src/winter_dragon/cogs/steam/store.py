@@ -1,7 +1,7 @@
 """Storing and querying Steam sales and their subscribers."""
 
-lazy from dataclasses import dataclass
-lazy from typing import TYPE_CHECKING
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 lazy from sqlmodel import col, or_
 lazy from wd_db.extension._herogold import Repository, Scoped

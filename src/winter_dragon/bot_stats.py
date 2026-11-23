@@ -6,8 +6,8 @@ agree. The dashboard runs in another process without a gateway, so the bot store
 """
 
 from datetime import datetime, timedelta
+from typing import TYPE_CHECKING
 lazy from importlib.metadata import version
-lazy from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
 from sqlmodel import Field

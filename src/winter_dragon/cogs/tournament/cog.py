@@ -1,11 +1,12 @@
 """The /tournament command group: sign-up, teams, a single-elimination bracket, match cards, drafts and votes."""
 
+from random import Random
 from typing import Annotated
-lazy from random import Random
 lazy from typing import TYPE_CHECKING, override
 
 from sqlmodel import Session
 from wd_bot.commands import Describe, Length, Lookup, Range
+from wd_discord.permissions import Permissions
 lazy from wd_bot.checks import member_has
 lazy from wd_bot.cogs import Cog, GroupCog
 lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive_by_id
@@ -21,14 +22,13 @@ lazy from wd_discord.components import ActionRow, SelectOption, StringSelect, Us
 lazy from wd_discord.embed import Embed
 lazy from wd_discord.interactions import ApplicationCommandOptionChoice, InteractionContextType
 lazy from wd_discord.limits import MAX_EMBED_DESCRIPTION_LENGTH, MAX_SELECT_OPTIONS, truncate
-lazy from wd_discord.permissions import Permissions
 lazy from wd_discord.snowflake import Snowflake
 lazy from wd_errors import Refused, unwrap
 
+from winter_dragon.config import CogConfig
 lazy from winter_dragon.cogs.team.cog import Teams
 lazy from winter_dragon.cogs.team.models import Team, TeamKind
 lazy from winter_dragon.cogs.team.service import members_of, teams_of
-lazy from winter_dragon.config import CogConfig
 lazy from winter_dragon.stored import stored
 lazy from winter_dragon.ui import ChangedEmbed, CreatedEmbed, DeletedEmbed, Tone, block, card
 

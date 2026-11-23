@@ -9,11 +9,12 @@ lazy from typing import TYPE_CHECKING, Annotated
 from fastapi import APIRouter, Depends, Form
 lazy from fastapi import Request, status
 lazy from sqlmodel import Session
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from starlette.responses import Response
 lazy from wd_db.extension.lifecycle import create_or_restore, find_by_key, row_key, soft_delete
 lazy from wd_errors import Refused
 lazy from wd_types.clock import utc_now
 
+from winter_dragon.web.profile import router as profile_router
 lazy from winter_dragon.cogs.reminder.domain import (
     REMINDER_TABLES,
     AnyReminder,
@@ -25,16 +26,15 @@ lazy from winter_dragon.cogs.reminder.domain import (
 lazy from winter_dragon.web.accounts import SignedIn, checked_csrf, visitor_zone
 lazy from winter_dragon.web.formatting import day_label, every
 lazy from winter_dragon.web.profile import ProfileContext, profile_page, render_profile_page
-lazy from winter_dragon.web.profile import router as profile_router
 lazy from winter_dragon.web.responses import Database, after_post, is_htmx
 
 
 if TYPE_CHECKING:
     from collections.abc import Generator
+    from zoneinfo import ZoneInfo
 
     from sqlalchemy import Engine
     from wd_discord.snowflake import Snowflake
-    from zoneinfo import ZoneInfo
 
     from winter_dragon.web.accounts import Account
 

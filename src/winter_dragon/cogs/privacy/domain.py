@@ -17,7 +17,7 @@ lazy from sqlalchemy.exc import SQLAlchemyError
 lazy from sqlmodel import Session, SQLModel, col, select
 lazy from wd_db.extension.lifecycle import DELETED_MEMBER, alive, lifecycle_models, owned_by, soft_delete
 
-lazy from winter_dragon.data_categories import DataCategory
+from winter_dragon.data_categories import DataCategory
 lazy from winter_dragon.member_hidden import MemberHiddenHook
 
 

@@ -1,10 +1,10 @@
 """The redirect page: opens an app link (``steam://...``) from Discord, which only makes http(s) links clickable."""
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter
 lazy from fastapi import Request, status
-lazy from starlette.responses import Response  # noqa: TC002 - FastAPI resolves route annotations at runtime
+lazy from starlette.responses import Response
 
 lazy from winter_dragon.redirect_link import REDIRECT_PATH, RedirectLink, UnsafeLinkError
 lazy from winter_dragon.web.responses import templates

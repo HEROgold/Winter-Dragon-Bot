@@ -1,6 +1,6 @@
 """The message a hangman game shows, and its Guess button."""
 
-lazy from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 lazy from wd_discord.components import ActionRow, Button, ButtonStyle
 
